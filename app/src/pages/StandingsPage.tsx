@@ -5,6 +5,7 @@ import { getFavoriteTeam, setFavoriteTeam } from '@/utils/storage';
 import { getTeam } from '@/data/teams';
 import BannerAd from '@/components/BannerAd';
 import FavoriteTeamModal from '@/components/FavoriteTeamModal';
+import TeamLogo from '@/components/TeamLogo';
 
 export default function StandingsPage() {
   const [standings, setStandings] = useState<TeamStanding[]>([]);
@@ -143,7 +144,7 @@ export default function StandingsPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xl">{info.emoji}</span>
+                    <TeamLogo team={s.team} size={28} />
                     <div className="min-w-0">
                       <p
                         className="font-bold text-sm truncate"
