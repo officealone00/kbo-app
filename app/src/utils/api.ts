@@ -6,32 +6,27 @@
  *
  * 배포 시 CONFIG의 githubUser/repo/branch를 본인 값으로 변경하세요.
  */
-
 // TODO: GitHub 배포 시 본인 정보로 교체
 const CONFIG = {
-  githubUser: 'YOUR_GITHUB_USERNAME',
-  repo: 'kbo-ranking-app',
+  githubUser: 'officealone00',
+  repo: 'kbo-app',
   branch: 'main',
 };
-
 function cdnUrl(path: string): string {
   const { githubUser, repo, branch } = CONFIG;
   // jsdelivr 형식: https://cdn.jsdelivr.net/gh/{user}/{repo}@{branch}/{path}
   return `https://cdn.jsdelivr.net/gh/${githubUser}/${repo}@${branch}/${path}`;
 }
-
 async function fetchJson<T>(path: string): Promise<T> {
   // 캐시 버스터: 10분 단위로 바뀌도록 (CDN은 보통 10분 캐시)
   const buster = Math.floor(Date.now() / (10 * 60 * 1000));
   const url = `${cdnUrl(path)}?v=${buster}`;
-
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`데이터 로딩 실패 (${res.status}): ${path}`);
   }
   return res.json();
 }
-
 // ─── 타입 정의 ──────────────────────────────
 export interface TeamStanding {
   rank: number;
@@ -47,7 +42,6 @@ export interface TeamStanding {
   home: string;
   away: string;
 }
-
 export interface Batter {
   rank: number;
   name: string;
@@ -65,7 +59,6 @@ export interface Batter {
   rbi: number;
   sb?: number;
 }
-
 export interface Pitcher {
   rank: number;
   name: string;
@@ -84,21 +77,18 @@ export interface Pitcher {
   so: number;
   role: '선발' | '불펜' | '마무리';
 }
-
 export interface BattersData {
   avg: Batter[];
   hr: Batter[];
   rbi: Batter[];
   sb: Batter[];
 }
-
 export interface PitchersData {
   era: Pitcher[];
   w: Pitcher[];
   so: Pitcher[];
   sv: Pitcher[];
 }
-
 export interface Game {
   home: string;
   away: string;
@@ -108,12 +98,10 @@ export interface Game {
   time?: string;
   stadium?: string;
 }
-
 export interface GamesData {
   today: { date: string; games: Game[] };
   yesterday: { date: string; games: Game[] };
 }
-
 export interface Meta {
   updatedAt: string;
   updatedAtKST: string;
@@ -121,7 +109,6 @@ export interface Meta {
   success: number;
   total: number;
 }
-
 // ─── API 함수들 ──────────────────────────────
 export const api = {
   standings: () => fetchJson<TeamStanding[]>('data/standings.json'),
@@ -130,7 +117,6 @@ export const api = {
   games: () => fetchJson<GamesData>('data/games.json'),
   meta: () => fetchJson<Meta>('data/meta.json'),
 };
-
 // ─── 로컬 개발용 폴백 ─────────────────────────
 // 로컬 개발 시 CDN 연결이 안 되면 로컬 JSON 사용
 // (vite dev 서버에서 /data/ 접근이 가능하도록 public 폴더 활용 가능)
