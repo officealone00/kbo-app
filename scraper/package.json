@@ -1,0 +1,17 @@
+{
+  "name": "kbo-scraper",
+  "version": "1.0.0",
+  "description": "KBO 리그 데이터 스크래퍼 (GitHub Actions에서 실행)",
+  "type": "module",
+  "main": "scrape.js",
+  "scripts": {
+    "start": "node scrape.js",
+    "test": "node scrape.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0"
+  }
+}

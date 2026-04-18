@@ -1,0 +1,22 @@
+{
+  "today": {
+    "date": "20260419",
+    "games": [
+      { "home": "KIA", "away": "삼성", "homeScore": null, "awayScore": null, "status": "예정", "time": "14:00", "stadium": "광주" },
+      { "home": "LG", "away": "NC", "homeScore": null, "awayScore": null, "status": "예정", "time": "14:00", "stadium": "잠실" },
+      { "home": "SSG", "away": "롯데", "homeScore": null, "awayScore": null, "status": "예정", "time": "17:00", "stadium": "인천" },
+      { "home": "KT", "away": "두산", "homeScore": null, "awayScore": null, "status": "예정", "time": "17:00", "stadium": "수원" },
+      { "home": "한화", "away": "키움", "homeScore": null, "awayScore": null, "status": "예정", "time": "17:00", "stadium": "대전" }
+    ]
+  },
+  "yesterday": {
+    "date": "20260418",
+    "games": [
+      { "home": "KIA", "away": "삼성", "homeScore": 5, "awayScore": 7, "status": "종료", "stadium": "광주" },
+      { "home": "LG", "away": "NC", "homeScore": 8, "awayScore": 3, "status": "종료", "stadium": "잠실" },
+      { "home": "SSG", "away": "롯데", "homeScore": 4, "awayScore": 2, "status": "종료", "stadium": "인천" },
+      { "home": "KT", "away": "두산", "homeScore": 6, "awayScore": 5, "status": "종료", "stadium": "수원" },
+      { "home": "한화", "away": "키움", "homeScore": 3, "awayScore": 6, "status": "종료", "stadium": "대전" }
+    ]
+  }
+}
