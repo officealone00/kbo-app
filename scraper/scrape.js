@@ -1,5 +1,5 @@
 /**
- * KBO 리그 스크래퍼
+ * KBO 리그 스크래퍼 (v3 - EUC-KR 인코딩 대응)
  *
  * KBO 공식 사이트(koreabaseball.com)에서 HTML 테이블을 긁어
  * JSON 파일로 저장한다.
@@ -14,6 +14,7 @@
 
 import { writeFile, mkdir } from "node:fs/promises";
 import { load } from "cheerio";
+import iconv from "iconv-lite";
 
 const DATA_DIR = new URL("../data/", import.meta.url);
 
@@ -31,7 +32,18 @@ async function fetchHtml(url) {
     },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return await res.text();
+
+  // KBO 공식 사이트는 EUC-KR 인코딩
+  const contentType = res.headers.get("content-type") || "";
+  const buffer = await res.arrayBuffer();
+  const isEucKr =
+    /euc-kr/i.test(contentType) ||
+    (!/utf-?8/i.test(contentType) && url.includes("koreabaseball.com"));
+
+  if (isEucKr) {
+    return iconv.decode(Buffer.from(buffer), "euc-kr");
+  }
+  return Buffer.from(buffer).toString("utf-8");
 }
 
 const clean = (s) => (s || "").replace(/\s+/g, " ").trim();
@@ -51,67 +63,49 @@ async function scrapeStandings() {
   const html = await fetchHtml(url);
   const $ = load(html);
 
-  // 테이블 헤더: 순위, 팀명, 경기, 승, 패, 무, 승률, 게임차, 최근10경기, 연속, 홈, 방문
-  const rows = [];
-  $("table.tData tbody tr, .record-table tbody tr, table tbody tr").each(
-    (_, tr) => {
-      const tds = $(tr).find("td");
-      if (tds.length < 8) return;
-      const rank = int($(tds[0]).text());
-      const team = clean($(tds[1]).text());
-      if (!team || !rank) return;
-      // 팀명이 10개 한정 (중복 방지)
-      if (rows.find((r) => r.team === team)) return;
-      rows.push({
-        rank,
-        team,
-        games: int($(tds[2]).text()),
-        wins: int($(tds[3]).text()),
-        losses: int($(tds[4]).text()),
-        draws: int($(tds[5]).text()),
-        winRate: num($(tds[6]).text()),
-        gamesBehind: num($(tds[7]).text()),
-        last10: clean($(tds[8]).text()),
-        streak: clean($(tds[9]).text()),
-        home: clean($(tds[10]).text()),
-        away: clean($(tds[11]).text()),
-      });
-    }
-  );
+  const rows = $("#cphContents_cphContents_cphContents_udpRecord table tbody tr");
+  const teams = [];
 
-  // KBO는 10팀이므로 10개 이상 되면 앞 10개만
-  const top10 = rows.slice(0, 10);
-  if (top10.length < 10) {
-    console.warn(`⚠️  standings: 팀 ${top10.length}개만 파싱됨`);
-  }
-  console.log(`✅ standings: ${top10.length}팀`);
-  return top10;
+  rows.each((_, tr) => {
+    const tds = $(tr).find("td");
+    if (tds.length < 11) return;
+    teams.push({
+      rank: int($(tds[0]).text()),
+      team: clean($(tds[1]).text()),
+      games: int($(tds[2]).text()),
+      wins: int($(tds[3]).text()),
+      losses: int($(tds[4]).text()),
+      draws: int($(tds[5]).text()),
+      winRate: num($(tds[6]).text()),
+      gamesBehind: num($(tds[7]).text()),
+      last10: clean($(tds[8]).text()),
+      streak: clean($(tds[9]).text()),
+      home: clean($(tds[10]).text()),
+      away: clean($(tds[11]).text()),
+    });
+  });
+
+  if (teams.length === 0) throw new Error("Standings 테이블이 비었어요");
+  console.log(`✅ standings: ${teams.length}개 팀`);
+  return teams;
 }
 
-// ─── 2. 타자 순위 ────────────────────────────────
-// 카테고리별로 정렬된 페이지를 각각 긁는다
-const HITTER_SORTS = {
-  avg: "HRA_RT", // 타율
-  hr: "HR_CN", // 홈런
-  rbi: "RBI_CN", // 타점
-  h: "HIT_CN", // 안타
-};
-
+// ─── 2. 타자 순위 ──────────────────────────────────
 async function scrapeHitterCategory(sort) {
   const url = `https://www.koreabaseball.com/Record/Player/HitterBasic/Basic1.aspx?sort=${sort}`;
   const html = await fetchHtml(url);
   const $ = load(html);
-
-  const rows = [];
-  // 타자 기본기록 테이블: 순위, 선수명, 팀명, AVG, G, PA, AB, R, H, 2B, 3B, HR, TB, RBI, SAC, SF
-  $("table tbody tr").each((_, tr) => {
+  const rows = $("#cphContents_cphContents_cphContents_udpContent table tbody tr");
+  const out = [];
+  rows.each((_, tr) => {
     const tds = $(tr).find("td");
-    if (tds.length < 14) return;
+    if (tds.length < 15) return;
     const rank = int($(tds[0]).text());
+    if (rank === 0 || rank > 30) return;
     const name = clean($(tds[1]).text());
     const team = clean($(tds[2]).text());
-    if (!rank || !name || !team) return;
-    rows.push({
+    if (!name || !team) return;
+    out.push({
       rank,
       name,
       team,
@@ -119,203 +113,293 @@ async function scrapeHitterCategory(sort) {
       games: int($(tds[4]).text()),
       pa: int($(tds[5]).text()),
       ab: int($(tds[6]).text()),
-      r: int($(tds[7]).text()),
-      h: int($(tds[8]).text()),
+      runs: int($(tds[7]).text()),
+      hits: int($(tds[8]).text()),
       doubles: int($(tds[9]).text()),
       triples: int($(tds[10]).text()),
       hr: int($(tds[11]).text()),
-      tb: int($(tds[12]).text()),
-      rbi: int($(tds[13]).text()),
+      rbi: int($(tds[12]).text()),
+      sb: int($(tds[13]).text()),
+      bb: int($(tds[14]).text()),
     });
   });
-
-  return rows.slice(0, 30);
+  return out;
 }
 
 async function scrapeBatters() {
-  // 타율(기본)만 긁어도 4가지 스탯이 다 있으므로, 정렬만 다르게 4번 요청할 필요 없음
-  // → 타율 기준 Top 30 + 전체 데이터를 모두 저장
-  const avgTop = await scrapeHitterCategory(HITTER_SORTS.avg);
-  const hrTop = await scrapeHitterCategory(HITTER_SORTS.hr);
-  const rbiTop = await scrapeHitterCategory(HITTER_SORTS.rbi);
-
-  // 도루(SB)는 Basic2 페이지에 있음
-  const sbTop = await scrapeHitterBasic2();
-
+  const [avg, hr, rbi, sb] = await Promise.all([
+    scrapeHitterCategory("HRA_RT"),
+    scrapeHitterCategory("HR"),
+    scrapeHitterCategory("RBI"),
+    scrapeHitterCategory("SB"),
+  ]);
+  const merged = { avg, hr, rbi, sb };
   console.log(
-    `✅ batters: 타율 ${avgTop.length}, 홈런 ${hrTop.length}, 타점 ${rbiTop.length}, 도루 ${sbTop.length}`
+    `✅ batters: avg ${avg.length}, hr ${hr.length}, rbi ${rbi.length}, sb ${sb.length}`
   );
-
-  return {
-    avg: avgTop,
-    hr: hrTop,
-    rbi: rbiTop,
-    sb: sbTop,
-  };
+  const basic2 = await scrapeHitterBasic2();
+  if (basic2) merged.basic2 = basic2;
+  return merged;
 }
 
 async function scrapeHitterBasic2() {
-  // Basic2: SLG, OBP, OPS, MH, RISP, PH_BA, SB (도루 포함)
-  const url =
-    "https://www.koreabaseball.com/Record/Player/HitterBasic/Basic2.aspx?sort=SB_CN";
   try {
+    const url =
+      "https://www.koreabaseball.com/Record/Player/HitterBasic/Basic2.aspx";
     const html = await fetchHtml(url);
     const $ = load(html);
-    const rows = [];
-    $("table tbody tr").each((_, tr) => {
+    const rows = $("#cphContents_cphContents_cphContents_udpContent table tbody tr");
+    const out = [];
+    rows.each((_, tr) => {
       const tds = $(tr).find("td");
-      if (tds.length < 10) return;
+      if (tds.length < 13) return;
       const rank = int($(tds[0]).text());
+      if (rank === 0 || rank > 30) return;
       const name = clean($(tds[1]).text());
       const team = clean($(tds[2]).text());
-      if (!rank || !name || !team) return;
-      // Basic2 컬럼: 순위, 선수명, 팀명, AVG, G, PA, GO/AO, 멀티안타, RISP, PH_BA, ... SB
-      // SB는 대개 마지막 즈음에 있음. 안전하게 마지막 5개 중에서 숫자 찾기
-      const sb = int($(tds[tds.length - 1]).text());
-      rows.push({
+      if (!name || !team) return;
+      out.push({
         rank,
         name,
         team,
-        sb,
-        avg: num($(tds[3]).text()),
+        gd: int($(tds[3]).text()),
+        sacFly: int($(tds[4]).text()),
+        sacBunt: int($(tds[5]).text()),
+        ibb: int($(tds[6]).text()),
+        hbp: int($(tds[7]).text()),
+        so: int($(tds[8]).text()),
+        gdp: int($(tds[9]).text()),
+        slg: num($(tds[10]).text()),
+        obp: num($(tds[11]).text()),
+        ops: num($(tds[12]).text()),
       });
     });
-    return rows.slice(0, 30);
-  } catch (e) {
-    console.warn(`⚠️  Basic2 (도루) 스크래핑 실패:`, e.message);
-    return [];
+    return out;
+  } catch {
+    return null;
   }
 }
 
-// ─── 3. 투수 순위 ────────────────────────────────
+// ─── 3. 투수 순위 ──────────────────────────────────
 async function scrapePitcherCategory(sort) {
   const url = `https://www.koreabaseball.com/Record/Player/PitcherBasic/Basic1.aspx?sort=${sort}`;
   const html = await fetchHtml(url);
   const $ = load(html);
-
-  const rows = [];
-  // 투수 기본기록: 순위, 선수명, 팀명, ERA, G, W, L, SV, HLD, WPCT, IP, H, HR, BB, HBP, SO, R, ER, WHIP
-  $("table tbody tr").each((_, tr) => {
+  const rows = $("#cphContents_cphContents_cphContents_udpContent table tbody tr");
+  const out = [];
+  rows.each((_, tr) => {
     const tds = $(tr).find("td");
-    if (tds.length < 15) return;
+    if (tds.length < 22) return;
     const rank = int($(tds[0]).text());
+    if (rank === 0 || rank > 30) return;
     const name = clean($(tds[1]).text());
     const team = clean($(tds[2]).text());
-    if (!rank || !name || !team) return;
-
-    const g = int($(tds[4]).text());
-    const w = int($(tds[5]).text());
-    const sv = int($(tds[7]).text());
-    const hld = int($(tds[8]).text());
-
-    // 역할 구분 (파생 데이터)
-    // - 세이브 5개 이상: 마무리
-    // - 홀드 5개 이상: 불펜
-    // - W + L 기준 경기 수의 절반 이상이 완투완봉/선발: 선발
-    // 단순 휴리스틱
+    if (!name || !team) return;
+    const wins = int($(tds[5]).text());
+    const losses = int($(tds[6]).text());
+    const holds = int($(tds[11]).text());
+    const saves = int($(tds[10]).text());
+    const cg = int($(tds[7]).text());
+    const sho = int($(tds[8]).text());
     let role = "선발";
-    if (sv >= 3) role = "마무리";
-    else if (hld >= 3) role = "불펜";
-    else if (w + int($(tds[6]).text()) < g * 0.5) role = "불펜";
-
-    rows.push({
+    if (saves > 3) role = "마무리";
+    else if (holds > 5) role = "불펜";
+    else if (wins + losses < 3 && cg + sho === 0) role = "불펜";
+    out.push({
       rank,
       name,
       team,
-      era: num($(tds[3]).text()),
-      g,
-      w,
-      l: int($(tds[6]).text()),
-      sv,
-      hld,
-      winRate: num($(tds[9]).text()),
-      ip: num($(tds[10]).text()),
-      h: int($(tds[11]).text()),
-      hr: int($(tds[12]).text()),
-      bb: int($(tds[13]).text()),
-      so: int($(tds[15] || tds[14]).text()),
       role,
+      era: num($(tds[3]).text()),
+      games: int($(tds[4]).text()),
+      wins,
+      losses,
+      cg,
+      sho,
+      w: wins,
+      l: losses,
+      sv: saves,
+      hld: holds,
+      wpct: num($(tds[12]).text()),
+      bf: int($(tds[13]).text()),
+      ip: num($(tds[15]).text()),
+      h: int($(tds[16]).text()),
+      hr: int($(tds[17]).text()),
+      bb: int($(tds[18]).text()),
+      hbp: int($(tds[19]).text()),
+      so: int($(tds[20]).text()),
+      er: int($(tds[21]).text()),
     });
   });
-
-  return rows.slice(0, 30);
+  return out;
 }
 
 async function scrapePitchers() {
-  // ERA, W, SO, SV 기준으로 각각 긁기
-  const PITCHER_SORTS = {
-    era: "ERA_RT",
-    w: "W_CN",
-    so: "SO_CN",
-    sv: "SV_CN",
-  };
-  const era = await scrapePitcherCategory(PITCHER_SORTS.era);
-  const w = await scrapePitcherCategory(PITCHER_SORTS.w);
-  const so = await scrapePitcherCategory(PITCHER_SORTS.so);
-  const sv = await scrapePitcherCategory(PITCHER_SORTS.sv);
-
+  const [era, wins, so, saves] = await Promise.all([
+    scrapePitcherCategory("ERA"),
+    scrapePitcherCategory("W"),
+    scrapePitcherCategory("SO"),
+    scrapePitcherCategory("SV"),
+  ]);
   console.log(
-    `✅ pitchers: 방어율 ${era.length}, 승 ${w.length}, 삼진 ${so.length}, 세이브 ${sv.length}`
+    `✅ pitchers: era ${era.length}, w ${wins.length}, so ${so.length}, sv ${saves.length}`
   );
-
-  return { era, w, so, sv };
+  return { era, wins, so, saves };
 }
 
-// ─── 4. 오늘/어제 경기 결과 ──────────────────────
+// ─── 4. 오늘/어제 경기 결과 (NEW 파싱) ──────────────────────
+const KBO_TEAMS = [
+  "KIA",
+  "삼성",
+  "LG",
+  "KT",
+  "두산",
+  "SSG",
+  "롯데",
+  "한화",
+  "NC",
+  "키움",
+];
+
+/**
+ * KBO 공식 Schedule.aspx 페이지 HTML 파싱
+ * 테이블 row 구조: <tr><td>시간</td><td>팀A vs 팀B</td><td>스코어</td>...
+ */
+function parseKBOScheduleHTML(html, dateStr) {
+  const $ = load(html);
+  const games = [];
+
+  // Schedule.aspx의 .tbl-type06 테이블
+  $(".tbl-type06 tbody tr").each((_, tr) => {
+    const tds = $(tr).find("td");
+    if (tds.length < 4) return;
+
+    // 시간 (첫번째 열)
+    const time = clean($(tds[0]).text());
+
+    // 팀 vs 팀 (play 열)
+    const playTd = $(tr).find("td.play").first();
+    const homeName = clean(playTd.find(".team.home em").text() || "");
+    const awayName = clean(playTd.find(".team.away em").text() || "");
+
+    // 스코어 (score 열)
+    const scoreText = clean(playTd.find(".score em").text() || "");
+    let homeScore = null;
+    let awayScore = null;
+    const scoreMatch = scoreText.match(/(\d+)\s*:\s*(\d+)/);
+    if (scoreMatch) {
+      // KBO 페이지에서는 "AWAY vs HOME" 순서로 표시되고 스코어도 Away:Home
+      awayScore = parseInt(scoreMatch[1], 10);
+      homeScore = parseInt(scoreMatch[2], 10);
+    }
+
+    // 구장
+    const stadium = clean(
+      $(tds[tds.length - 2]).text() || $(tds[tds.length - 1]).text() || ""
+    );
+
+    // 상태
+    let status = "예정";
+    if (homeScore !== null && awayScore !== null) status = "종료";
+    if (clean($(tr).text()).includes("취소")) status = "취소";
+
+    if (homeName && awayName) {
+      games.push({
+        home: homeName,
+        away: awayName,
+        homeScore,
+        awayScore,
+        status,
+        time,
+        stadium,
+      });
+    }
+  });
+
+  return games;
+}
+
+/**
+ * Fallback: 텍스트 전체에서 팀 이름 쌍 찾아서 파싱
+ * 예: "KIA 3 경기종료 6 롯데"
+ */
+function parseGamesFromText(html, dateStr) {
+  const text = clean(load(html)("body").text());
+  const games = [];
+  const teamPattern = KBO_TEAMS.join("|");
+  const regex = new RegExp(
+    `(${teamPattern})\\s+(\\d+)\\s+(?:경기종료|종료|VS|vs)\\s+(\\d+)\\s+(${teamPattern})`,
+    "g"
+  );
+
+  let m;
+  while ((m = regex.exec(text)) !== null) {
+    games.push({
+      away: m[1],
+      awayScore: parseInt(m[2], 10),
+      home: m[4],
+      homeScore: parseInt(m[3], 10),
+      status: "종료",
+      time: "",
+      stadium: "",
+    });
+  }
+
+  return games;
+}
+
+async function scrapeGamesByDate(dateObj) {
+  const dateStr =
+    dateObj.getFullYear() +
+    String(dateObj.getMonth() + 1).padStart(2, "0") +
+    String(dateObj.getDate()).padStart(2, "0");
+
+  const urls = [
+    `https://www.koreabaseball.com/Schedule/Schedule.aspx?seriesId=0,9,6,7,8&searchScDate=${dateStr}`,
+    `https://www.koreabaseball.com/Schedule/ScoreBoard.aspx?searchScDate=${dateStr}`,
+  ];
+
+  for (const url of urls) {
+    try {
+      const html = await fetchHtml(url);
+
+      // 1차 시도: 구조화된 HTML 파싱
+      let games = parseKBOScheduleHTML(html, dateStr);
+
+      // 2차 시도: 텍스트에서 패턴 매칭
+      if (games.length === 0) {
+        games = parseGamesFromText(html, dateStr);
+      }
+
+      // 중복 제거 (같은 팀 페어)
+      const seen = new Set();
+      const unique = [];
+      for (const g of games) {
+        const key = `${g.home}-${g.away}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        unique.push(g);
+      }
+
+      if (unique.length > 0) {
+        return { date: dateStr, games: unique };
+      }
+    } catch (e) {
+      console.warn(`  ⚠️  ${url} 실패: ${e.message}`);
+    }
+  }
+
+  return { date: dateStr, games: [] };
+}
+
 async function scrapeGames() {
-  // ScoreBoard.aspx 페이지는 당일 경기를 보여준다
-  // 어제 경기는 Schedule.aspx?date=YYYYMMDD 형식으로 접근
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
 
-  const fmt = (d) =>
-    `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(
-      d.getDate()
-    ).padStart(2, "0")}`;
-
-  async function scrapeByDate(date) {
-    const dateStr = fmt(date);
-    const url = `https://www.koreabaseball.com/Schedule/ScoreBoard.aspx?searchScDate=${dateStr}`;
-    try {
-      const html = await fetchHtml(url);
-      const $ = load(html);
-      const games = [];
-      // 스코어보드 페이지 구조는 경기 카드 형태
-      // 각 경기는 tbl_board, game_schedule 등의 class를 가짐
-      $(
-        ".smsScore, .scoreBoard, .gameCenter_table, table.tbl_board, .score_board"
-      ).each((_, el) => {
-        const text = clean($(el).text());
-        if (!text) return;
-        games.push({ raw: text, date: dateStr });
-      });
-
-      // 더 간단한 접근: 팀 이름을 포함하는 td 쌍 찾기
-      const teams = [
-        "삼성",
-        "LG",
-        "KT",
-        "SSG",
-        "KIA",
-        "NC",
-        "한화",
-        "롯데",
-        "두산",
-        "키움",
-      ];
-      // 페어링된 경기를 가장 확실하게 가져올 수 있도록 텍스트 기반 파싱
-      // 실패해도 페이지 로드 자체는 성공하면 일단 메타데이터 반환
-      return { date: dateStr, games };
-    } catch (e) {
-      console.warn(`⚠️  ${dateStr} 경기 스크래핑 실패:`, e.message);
-      return { date: dateStr, games: [] };
-    }
-  }
-
   const [todayData, yesterdayData] = await Promise.all([
-    scrapeByDate(today),
-    scrapeByDate(yesterday),
+    scrapeGamesByDate(today),
+    scrapeGamesByDate(yesterday),
   ]);
 
   console.log(
@@ -397,8 +481,10 @@ async function main() {
   };
   await writeJson("meta", meta);
 
-  console.log(`\n${meta.success === 4 ? "✅" : "⚠️"} 완료: ${meta.success}/${meta.total} 성공`);
-  if (errors.length) {
+  console.log(
+    `\n${meta.success === 4 ? "✅" : "⚠️"} 완료: ${meta.success}/${meta.total} 성공`
+  );
+  if (errors.length && meta.success === 0) {
     console.error("에러:", errors);
     process.exit(1);
   }
