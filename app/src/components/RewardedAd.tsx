@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 // ─── 광고 ID 설정 ──────────────────────
 const IS_AD_PRODUCTION = true;
 const TEST_REWARDED_ID = 'ait-ad-test-rewarded-id';
-// TODO: 구글 반영 완료 후 실제 ID로 교체
-const PROD_REWARDED_ID = 'ait.v2.live.YOUR_REWARDED_ID_HERE';
+// ✅ 2026.04.19 발급 완료
+const PROD_REWARDED_ID = 'ait.v2.live.9d36016c855d4425';
 const AD_ID = IS_AD_PRODUCTION ? PROD_REWARDED_ID : TEST_REWARDED_ID;
 
 // 개발 모드 감지 (로컬 브라우저에서 빠른 테스트용)
