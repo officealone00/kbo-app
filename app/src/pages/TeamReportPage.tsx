@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, TrendingUp, TrendingDown, Minus, Trophy, Target, Users, Swords } from 'lucide-react';
 import { api, type TeamStanding, type BattersData, type PitchersData, type GamesData } from '@/utils/api';
@@ -15,6 +15,7 @@ export default function TeamReportPage() {
   const [loading, setLoading] = useState(true);
   const [adShown, setAdShown] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
+  const unlockedRef = useRef(false); // 비동기 타이밍 이슈 방지
 
   // 응원팀 없으면 홈으로
   useEffect(() => {
@@ -45,16 +46,16 @@ export default function TeamReportPage() {
   }, [favorite]);
 
   const handleReward = () => {
+    unlockedRef.current = true;
     setUnlocked(true);
   };
 
   const handleAdClose = () => {
     setAdShown(false);
-    // 광고 닫았는데 보상 못 받았으면 → 홈으로
-    if (!unlocked) {
-      setTimeout(() => {
-        if (!unlocked) navigate('/', { replace: true });
-      }, 500);
+    // 보상 못 받은 경우에만 홈으로 리턴
+    // (unlockedRef로 최신값 확인 - setState는 비동기)
+    if (!unlockedRef.current) {
+      navigate('/', { replace: true });
     }
   };
 
