@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
 // ─── 광고 ID 설정 ──────────────────────
-// TODO: 앱인토스 콘솔에서 발급받은 실제 광고 ID로 교체
-const IS_AD_PRODUCTION = false; // 출시 전 true로 변경
+// 앱인토스 콘솔에서 발급받은 실제 배너 광고 ID
+const IS_AD_PRODUCTION = true; // 실제 광고 노출 (출시 모드)
 const TEST_BANNER_ID = 'ait-ad-test-banner-id';
-const PROD_BANNER_ID = 'ait.v2.live.YOUR_BANNER_ID_HERE';
+const PROD_BANNER_ID = 'ait.v2.live.5c9eab2ff0f64a81';
 const BANNER_AD_ID = IS_AD_PRODUCTION ? PROD_BANNER_ID : TEST_BANNER_ID;
 
 // ─── TossAds 초기화 (1회만) ──────────────

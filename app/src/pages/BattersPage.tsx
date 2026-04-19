@@ -114,6 +114,13 @@ export default function BattersPage() {
         </div>
       </div>
 
+      {/* 🎯 배너 #1 - 필터 바로 아래 (최상단) */}
+      {!loading && rows.length > 0 && (
+        <div className="px-5 pt-3">
+          <BannerAd />
+        </div>
+      )}
+
       {/* Content */}
       <div className="px-5 py-4">
         {error && (
@@ -143,8 +150,14 @@ export default function BattersPage() {
           {rows.map((b, i) => (
             <div key={`${b.name}-${i}`}>
               <BatterRow batter={b} value={formatValue(b)} category={cat} />
-              {/* Banner ad at position 10 */}
-              {i === 9 && (
+              {/* 🎯 배너 #2 - 5위와 6위 사이 (스크롤 초입) */}
+              {i === 4 && (
+                <div className="my-3">
+                  <BannerAd />
+                </div>
+              )}
+              {/* 🎯 배너 #3 - 15위와 16위 사이 (스크롤 중반) */}
+              {i === 14 && (
                 <div className="my-3">
                   <BannerAd />
                 </div>
@@ -154,7 +167,7 @@ export default function BattersPage() {
         </div>
       </div>
 
-      {/* Bottom banner */}
+      {/* 🎯 배너 #4 - 하단 (기존 유지) */}
       {!loading && rows.length > 0 && (
         <div className="px-5 pb-6">
           <BannerAd />

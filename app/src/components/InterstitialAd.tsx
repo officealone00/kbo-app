@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 
-const IS_AD_PRODUCTION = false;
+// ─── 광고 ID 설정 ──────────────────────
+// 앱인토스 콘솔에서 발급받은 실제 전면 광고 ID
+const IS_AD_PRODUCTION = true; // 실제 광고 노출 (출시 모드)
 const TEST_INTERSTITIAL_ID = 'ait-ad-test-interstitial-id';
-const PROD_INTERSTITIAL_ID = 'ait.v2.live.YOUR_INTERSTITIAL_ID_HERE';
+const PROD_INTERSTITIAL_ID = 'ait.v2.live.b4ff90902ebd47dd';
 const AD_ID = IS_AD_PRODUCTION ? PROD_INTERSTITIAL_ID : TEST_INTERSTITIAL_ID;
 
 interface Props {

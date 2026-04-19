@@ -77,6 +77,13 @@ export default function StandingsPage() {
         </div>
       )}
 
+      {/* 🎯 배너 #1 - 즐겨찾기 카드 아래 (최상단 노출용) */}
+      {favorite && !loading && (
+        <div className="px-5 mb-3">
+          <BannerAd />
+        </div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="mx-5 mb-3 p-4 bg-toss-red/10 rounded-2xl">
@@ -120,59 +127,67 @@ export default function StandingsPage() {
               <span className="text-right">게임차</span>
             </div>
 
-            {standings.map((s) => {
+            {standings.map((s, idx) => {
               const info = getTeam(s.team);
               const isFav = s.team === favorite;
               return (
-                <div
-                  key={s.team}
-                  className="grid items-center px-3 py-3 border-b border-toss-gray-100 last:border-b-0"
-                  style={{
-                    gridTemplateColumns: '28px 1fr 36px 36px 36px 48px 48px',
-                    backgroundColor: isFav ? info.bgLight : 'transparent',
-                  }}
-                >
-                  <div className="text-center">
-                    <span
-                      className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold"
-                      style={{
-                        backgroundColor: s.rank <= 5 ? info.color : '#E5E8EB',
-                        color: s.rank <= 5 ? 'white' : '#8B95A1',
-                      }}
-                    >
-                      {s.rank}
+                <div key={s.team}>
+                  <div
+                    className="grid items-center px-3 py-3 border-b border-toss-gray-100 last:border-b-0"
+                    style={{
+                      gridTemplateColumns: '28px 1fr 36px 36px 36px 48px 48px',
+                      backgroundColor: isFav ? info.bgLight : 'transparent',
+                    }}
+                  >
+                    <div className="text-center">
+                      <span
+                        className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold"
+                        style={{
+                          backgroundColor: s.rank <= 5 ? info.color : '#E5E8EB',
+                          color: s.rank <= 5 ? 'white' : '#8B95A1',
+                        }}
+                      >
+                        {s.rank}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <TeamLogo team={s.team} size={28} />
+                      <div className="min-w-0">
+                        <p
+                          className="font-bold text-sm truncate"
+                          style={{ color: isFav ? info.color : '#191F28' }}
+                        >
+                          {s.team}
+                          {isFav && ' ❤️'}
+                        </p>
+                        <p className="text-[10px] text-toss-gray-500 truncate">
+                          최근 {s.last10} · {s.streak}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-right text-sm font-semibold text-toss-gray-800">
+                      {s.wins}
+                    </span>
+                    <span className="text-right text-sm text-toss-gray-600">
+                      {s.draws}
+                    </span>
+                    <span className="text-right text-sm text-toss-gray-600">
+                      {s.losses}
+                    </span>
+                    <span className="text-right text-sm font-semibold text-toss-gray-800 tabular-nums">
+                      {s.winRate.toFixed(3)}
+                    </span>
+                    <span className="text-right text-sm text-toss-gray-600 tabular-nums">
+                      {s.gamesBehind === 0 ? '-' : s.gamesBehind}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <TeamLogo team={s.team} size={28} />
-                    <div className="min-w-0">
-                      <p
-                        className="font-bold text-sm truncate"
-                        style={{ color: isFav ? info.color : '#191F28' }}
-                      >
-                        {s.team}
-                        {isFav && ' ❤️'}
-                      </p>
-                      <p className="text-[10px] text-toss-gray-500 truncate">
-                        최근 {s.last10} · {s.streak}
-                      </p>
+
+                  {/* 🎯 배너 #2 - 5위와 6위 사이 인라인 (스크롤 중간 노출) */}
+                  {idx === 4 && (
+                    <div className="px-3 py-3 bg-toss-gray-50 border-b border-toss-gray-100">
+                      <BannerAd />
                     </div>
-                  </div>
-                  <span className="text-right text-sm font-semibold text-toss-gray-800">
-                    {s.wins}
-                  </span>
-                  <span className="text-right text-sm text-toss-gray-600">
-                    {s.draws}
-                  </span>
-                  <span className="text-right text-sm text-toss-gray-600">
-                    {s.losses}
-                  </span>
-                  <span className="text-right text-sm font-semibold text-toss-gray-800 tabular-nums">
-                    {s.winRate.toFixed(3)}
-                  </span>
-                  <span className="text-right text-sm text-toss-gray-600 tabular-nums">
-                    {s.gamesBehind === 0 ? '-' : s.gamesBehind}
-                  </span>
+                  )}
                 </div>
               );
             })}
@@ -180,7 +195,7 @@ export default function StandingsPage() {
         </div>
       )}
 
-      {/* Banner ad */}
+      {/* 🎯 배너 #3 - 순위표 하단 (기존 위치) */}
       <div className="px-5 mb-4">
         <BannerAd />
       </div>

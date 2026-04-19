@@ -74,6 +74,13 @@ export default function GamesPage() {
         </div>
       </div>
 
+      {/* 🎯 배너 #1 - 탭 바로 아래 (최상단 - 탭 전환 직후 시선 집중 구간) */}
+      {!loading && games.length > 0 && (
+        <div className="px-5 pt-3">
+          <BannerAd />
+        </div>
+      )}
+
       {/* Content */}
       <div className="px-5 py-4">
         {error && (
@@ -105,6 +112,7 @@ export default function GamesPage() {
             {sorted.map((g, i) => (
               <div key={i}>
                 <GameCard game={g} favorite={favorite} />
+                {/* 🎯 배너 #2 - 3번째 경기 아래 (기존 유지) */}
                 {i === 2 && (
                   <div className="my-3">
                     <BannerAd />
@@ -116,6 +124,7 @@ export default function GamesPage() {
         )}
       </div>
 
+      {/* 🎯 배너 #3 - 하단 (기존 유지) */}
       {!loading && games.length > 0 && (
         <div className="px-5 pb-6">
           <BannerAd />
