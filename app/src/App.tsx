@@ -4,6 +4,7 @@ import StandingsPage from '@/pages/StandingsPage';
 import BattersPage from '@/pages/BattersPage';
 import PitchersPage from '@/pages/PitchersPage';
 import GamesPage from '@/pages/GamesPage';
+import TeamReportPage from '@/pages/TeamReportPage';
 import BottomNav from '@/components/BottomNav';
 import FavoriteTeamModal from '@/components/FavoriteTeamModal';
 import InterstitialAd from '@/components/InterstitialAd';
@@ -31,6 +32,7 @@ export default function App() {
 function AppShell() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showInterstitial, setShowInterstitial] = useState(false);
+  const location = useLocation();
 
   // 첫 진입 시 온보딩 모달
   useEffect(() => {
@@ -45,6 +47,9 @@ function AppShell() {
     markOnboarded();
   };
 
+  // 리포트 페이지에서는 하단 탭바 숨김 (몰입감 UP + 광고 시청 방해 X)
+  const hideBottomNav = location.pathname === '/report';
+
   return (
     <>
       <BackButtonHandler />
@@ -54,9 +59,10 @@ function AppShell() {
           <Route path="/batters" element={<BattersPage />} />
           <Route path="/pitchers" element={<PitchersPage />} />
           <Route path="/games" element={<GamesPage />} />
+          <Route path="/report" element={<TeamReportPage />} />
         </Routes>
       </div>
-      <BottomNav />
+      {!hideBottomNav && <BottomNav />}
 
       {/* 전면광고 */}
       {showInterstitial && (

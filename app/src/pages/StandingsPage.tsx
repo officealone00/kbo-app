@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Heart, Settings, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Heart, Settings, RefreshCw, BarChart3 } from 'lucide-react';
 import { api, type TeamStanding, type Meta } from '@/utils/api';
 import { getFavoriteTeam, setFavoriteTeam } from '@/utils/storage';
 import { getTeam } from '@/data/teams';
@@ -8,6 +9,7 @@ import FavoriteTeamModal from '@/components/FavoriteTeamModal';
 import TeamLogo from '@/components/TeamLogo';
 
 export default function StandingsPage() {
+  const navigate = useNavigate();
   const [standings, setStandings] = useState<TeamStanding[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,10 +72,14 @@ export default function StandingsPage() {
         </div>
       </div>
 
-      {/* Favorite team card */}
+      {/* Favorite team card + 상세 리포트 버튼 */}
       {favorite && (
         <div className="px-5 mb-3 mt-2">
-          <FavoriteTeamCard team={favorite} standings={standings} />
+          <FavoriteTeamCard
+            team={favorite}
+            standings={standings}
+            onReportClick={() => navigate('/report')}
+          />
         </div>
       )}
 
@@ -231,9 +237,11 @@ export default function StandingsPage() {
 function FavoriteTeamCard({
   team,
   standings,
+  onReportClick,
 }: {
   team: string;
   standings: TeamStanding[];
+  onReportClick: () => void;
 }) {
   const info = getTeam(team);
   const stats = standings.find((s) => s.team === team);
@@ -264,9 +272,22 @@ function FavoriteTeamCard({
             {stats.wins}승 {stats.draws}무 {stats.losses}패 · 승률 {stats.winRate.toFixed(3)}
           </span>
         </div>
-        <p className="text-xs opacity-80 mt-1">
+        <p className="text-xs opacity-80 mt-1 mb-3">
           {stats.gamesBehind === 0 ? '선두!' : `1위와 ${stats.gamesBehind}게임차`} · {stats.streak}
         </p>
+
+        {/* 🎯 상세 리포트 버튼 (리워드 광고 트리거) */}
+        <button
+          onClick={onReportClick}
+          className="w-full bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-xl py-2.5 px-3 flex items-center justify-between transition-all"
+          style={{ border: '1px solid rgba(255,255,255,0.3)' }}
+        >
+          <div className="flex items-center gap-2">
+            <BarChart3 size={16} />
+            <span className="text-sm font-bold">📊 상세 분석 리포트</span>
+          </div>
+          <span className="text-xs opacity-90">→</span>
+        </button>
       </div>
     </div>
   );
