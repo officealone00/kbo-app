@@ -5,8 +5,7 @@ export default defineConfig({
   brand: {
     displayName: 'KBO 순위',
     primaryColor: '#3182F6',
-    // TODO: 앱인토스 콘솔에서 업로드한 아이콘 URL로 교체
-    icon: 'https://static.toss.im/appsintoss/placeholder.png',
+    icon: 'https://static.toss.im/appsintoss/24163/20fecae8-68c8-4642-9c76-b62c77c11f00.png',
   },
   web: {
     host: 'localhost',
