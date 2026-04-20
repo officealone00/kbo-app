@@ -1,7 +1,6 @@
 ﻿/**
- * KBO 리그 스크래퍼 (v5.2)
- * v5.1 → v5.2: 카테고리별 실제 sort 파라미터로 각각 fetch
- *               (타율 pool 의존 제거, HR/RBI/SB 상위 정확히 반영)
+ * KBO 리그 스크래퍼 (v5.3)
+ * v5.2 → v5.3: 어제 경기 복원 (games.json 구조 {today, yesterday}) + KST 타임존 정확 처리
  */
 
 import { writeFile, mkdir } from "node:fs/promises";
@@ -49,6 +48,16 @@ const int = (s) => {
   const v = parseInt(clean(s).replace(/[^\d-]/g, ""), 10);
   return Number.isFinite(v) ? v : 0;
 };
+
+// KST 기준 YYYYMMDD (서버/로컬 무관)
+function kstDateStr(offsetDays = 0) {
+  const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+  kstNow.setUTCDate(kstNow.getUTCDate() + offsetDays);
+  const y = kstNow.getUTCFullYear();
+  const m = String(kstNow.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(kstNow.getUTCDate()).padStart(2, "0");
+  return `${y}${m}${d}`;
+}
 
 function getHeaderCells($, $table) {
   const theadCells = $table.find("thead th");
@@ -200,27 +209,19 @@ async function fetchPitcherPage(sortKey) {
 
 async function scrapePitchers() {
   const [era, wins, so, saves] = await Promise.all([
-    fetchPitcherPage(""),            // 기본(ERA 오름차순)
-    fetchPitcherPage("W_CN"),        // 승
-    fetchPitcherPage("KK_CN"),       // 삼진
-    fetchPitcherPage("SV_CN"),       // 세이브
+    fetchPitcherPage(""),
+    fetchPitcherPage("W_CN"),
+    fetchPitcherPage("KK_CN"),
+    fetchPitcherPage("SV_CN"),
   ]);
   console.log(`OK pitchers: era ${era.length}, w ${wins.length}, so ${so.length}, sv ${saves.length}`);
   return { era, wins, so, saves };
 }
 
-async function scrapeGames() {
-  const url = "https://www.koreabaseball.com/Schedule/ScoreBoard.aspx";
+async function scrapeGamesForDate(dateStr) {
+  const url = `https://www.koreabaseball.com/Schedule/ScoreBoard.aspx?searchScDate=${dateStr}`;
   const html = await fetchHtml(url);
   const $ = load(html);
-  let dateStr = "";
-  $("body *").each((_, el) => {
-    const txt = clean($(el).text());
-    const m = txt.match(/^(\d{4})\.(\d{1,2})\.(\d{1,2})/);
-    if (m && !dateStr) {
-      dateStr = `${m[1]}${m[2].padStart(2, "0")}${m[3].padStart(2, "0")}`;
-    }
-  });
   const games = [];
   $("table").each((_, t) => {
     const $t = $(t);
@@ -248,8 +249,18 @@ async function scrapeGames() {
       status: bothScored ? "종료" : "예정",
     });
   });
-  console.log(`OK games: ${dateStr || "no-date"} - ${games.length} games`);
   return { date: dateStr, games };
+}
+
+async function scrapeGames() {
+  const todayStr = kstDateStr(0);
+  const yesterdayStr = kstDateStr(-1);
+  const [todayData, yesterdayData] = await Promise.all([
+    scrapeGamesForDate(todayStr),
+    scrapeGamesForDate(yesterdayStr),
+  ]);
+  console.log(`OK games: today ${todayData.date} (${todayData.games.length}), yesterday ${yesterdayData.date} (${yesterdayData.games.length})`);
+  return { today: todayData, yesterday: yesterdayData };
 }
 
 async function writeJson(name, data) {
@@ -270,7 +281,7 @@ async function runSection(name, fn) {
 }
 
 async function main() {
-  console.log("KBO scraper v5.2 start");
+  console.log("KBO scraper v5.3 start");
   console.log(`${new Date().toISOString()}\n`);
   await mkdir(DATA_DIR, { recursive: true });
   const results = {
@@ -285,7 +296,7 @@ async function main() {
     updatedAt: new Date().toISOString(),
     updatedAtKST: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
     season: new Date().getFullYear(),
-    version: "5.2",
+    version: "5.3",
     success, total: 4, errors,
   };
   await writeJson("meta", meta);

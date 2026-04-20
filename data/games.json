@@ -1,4 +1,10 @@
 {
-  "date": "20260420",
-  "games": []
+  "today": {
+    "date": "20260420",
+    "games": []
+  },
+  "yesterday": {
+    "date": "20260419",
+    "games": []
+  }
 }
