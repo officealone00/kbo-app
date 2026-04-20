@@ -1,6 +1,7 @@
 ﻿/**
- * KBO 리그 스크래퍼 (v5.1)
- * v5 → v5.1: thead 없는 테이블(투수, 이닝)에도 대응
+ * KBO 리그 스크래퍼 (v5.2)
+ * v5.1 → v5.2: 카테고리별 실제 sort 파라미터로 각각 fetch
+ *               (타율 pool 의존 제거, HR/RBI/SB 상위 정확히 반영)
  */
 
 import { writeFile, mkdir } from "node:fs/promises";
@@ -8,11 +9,7 @@ import { load } from "cheerio";
 import iconv from "iconv-lite";
 
 const DATA_DIR = new URL("../data/", import.meta.url);
-
-const UA =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-  "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
-
+const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const RETRY = 3;
 const RETRY_DELAY_MS = 2000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -53,7 +50,6 @@ const int = (s) => {
   return Number.isFinite(v) ? v : 0;
 };
 
-// 헬퍼: thead 있으면 거기서, 없으면 tr:first-child에서 헤더 찾기
 function getHeaderCells($, $table) {
   const theadCells = $table.find("thead th");
   if (theadCells.length > 0) return theadCells;
@@ -64,7 +60,6 @@ function getDataRows($, $table) {
   if (tbodyRows.length > 0) return tbodyRows;
   return $table.find("tr").slice(1);
 }
-
 function buildColumnMap($, $table) {
   const map = {};
   getHeaderCells($, $table).each((i, th) => {
@@ -104,14 +99,14 @@ async function scrapeStandings() {
   return teams;
 }
 
-async function scrapeBatters() {
-  const url = "https://www.koreabaseball.com/Record/Player/HitterBasic/BasicOld.aspx?sort=HRA_RT";
+async function fetchBatterPage(sortKey) {
+  const url = `https://www.koreabaseball.com/Record/Player/HitterBasic/BasicOld.aspx?sort=${sortKey}`;
   const html = await fetchHtml(url);
   const $ = load(html);
   const $table = $("table").filter((_, t) => getHeaderCells($, $(t)).length >= 10).first();
-  if ($table.length === 0) throw new Error("batter table not found");
+  if ($table.length === 0) throw new Error(`batter table not found (sort=${sortKey})`);
   const col = buildColumnMap($, $table);
-  for (const key of ["선수명", "팀명", "AVG"]) {
+  for (const key of ["선수명", "팀명"]) {
     if (!(key in col)) throw new Error(`missing column: ${key}`);
   }
   const get = (tds, key, parser = clean) => {
@@ -119,14 +114,14 @@ async function scrapeBatters() {
     if (idx === undefined) return parser("");
     return parser($(tds[idx]).text());
   };
-  const allPlayers = [];
+  const players = [];
   getDataRows($, $table).each((_, tr) => {
     const tds = $(tr).find("td");
     if (tds.length < Object.keys(col).length) return;
     const name = get(tds, "선수명");
     const team = get(tds, "팀명");
     if (!name || !team) return;
-    allPlayers.push({
+    players.push({
       name, team,
       avg: get(tds, "AVG", num),
       games: get(tds, "G", int),
@@ -143,31 +138,29 @@ async function scrapeBatters() {
       so: get(tds, "SO", int),
     });
   });
-  if (allPlayers.length === 0) throw new Error("batter data empty");
-  const topN = 30;
-  const sortedBy = (key, ascending = false) => {
-    const dir = ascending ? 1 : -1;
-    return [...allPlayers].sort((a, b) => (a[key] - b[key]) * dir)
-      .slice(0, topN).map((p, i) => ({ rank: i + 1, ...p }));
-  };
-  const merged = {
-    avg: sortedBy("avg"),
-    hr: sortedBy("hr"),
-    rbi: sortedBy("rbi"),
-    sb: sortedBy("sb"),
-  };
-  console.log(`OK batters: avg ${merged.avg.length}, hr ${merged.hr.length}, rbi ${merged.rbi.length}, sb ${merged.sb.length} (pool ${allPlayers.length})`);
-  return merged;
+  return players.slice(0, 30).map((p, i) => ({ rank: i + 1, ...p }));
 }
 
-async function scrapePitchers() {
-  const url = "https://www.koreabaseball.com/Record/Player/PitcherBasic/BasicOld.aspx";
+async function scrapeBatters() {
+  const [avg, hr, rbi, sb] = await Promise.all([
+    fetchBatterPage("HRA_RT"),
+    fetchBatterPage("HR_CN"),
+    fetchBatterPage("RBI_CN"),
+    fetchBatterPage("SB_CN"),
+  ]);
+  console.log(`OK batters: avg ${avg.length}, hr ${hr.length}, rbi ${rbi.length}, sb ${sb.length}`);
+  return { avg, hr, rbi, sb };
+}
+
+async function fetchPitcherPage(sortKey) {
+  const base = "https://www.koreabaseball.com/Record/Player/PitcherBasic/BasicOld.aspx";
+  const url = sortKey ? `${base}?sort=${sortKey}` : base;
   const html = await fetchHtml(url);
   const $ = load(html);
   const $table = $("table").filter((_, t) => getHeaderCells($, $(t)).length >= 10).first();
-  if ($table.length === 0) throw new Error("pitcher table not found");
+  if ($table.length === 0) throw new Error(`pitcher table not found (sort=${sortKey})`);
   const col = buildColumnMap($, $table);
-  for (const key of ["선수명", "팀명", "ERA"]) {
+  for (const key of ["선수명", "팀명"]) {
     if (!(key in col)) throw new Error(`missing column: ${key}`);
   }
   const get = (tds, key, parser = clean) => {
@@ -175,7 +168,7 @@ async function scrapePitchers() {
     if (idx === undefined) return parser("");
     return parser($(tds[idx]).text());
   };
-  const allPlayers = [];
+  const players = [];
   getDataRows($, $table).each((_, tr) => {
     const tds = $(tr).find("td");
     if (tds.length < Object.keys(col).length) return;
@@ -189,7 +182,7 @@ async function scrapePitchers() {
     let role = "선발";
     if (saves > 3) role = "마무리";
     else if (holds > 5) role = "불펜";
-    allPlayers.push({
+    players.push({
       name, team, role,
       era: get(tds, "ERA", num),
       games: get(tds, "G", int),
@@ -202,21 +195,18 @@ async function scrapePitchers() {
       er: get(tds, "ER", int),
     });
   });
-  if (allPlayers.length === 0) throw new Error("pitcher data empty");
-  const topN = 30;
-  const sortedBy = (key, ascending = false) => {
-    const dir = ascending ? 1 : -1;
-    return [...allPlayers].sort((a, b) => (a[key] - b[key]) * dir)
-      .slice(0, topN).map((p, i) => ({ rank: i + 1, ...p }));
-  };
-  const merged = {
-    era: sortedBy("era", true),
-    wins: sortedBy("wins"),
-    so: sortedBy("so"),
-    saves: sortedBy("sv"),
-  };
-  console.log(`OK pitchers: era ${merged.era.length}, w ${merged.wins.length}, so ${merged.so.length}, sv ${merged.saves.length} (pool ${allPlayers.length})`);
-  return merged;
+  return players.slice(0, 30).map((p, i) => ({ rank: i + 1, ...p }));
+}
+
+async function scrapePitchers() {
+  const [era, wins, so, saves] = await Promise.all([
+    fetchPitcherPage(""),            // 기본(ERA 오름차순)
+    fetchPitcherPage("W_CN"),        // 승
+    fetchPitcherPage("KK_CN"),       // 삼진
+    fetchPitcherPage("SV_CN"),       // 세이브
+  ]);
+  console.log(`OK pitchers: era ${era.length}, w ${wins.length}, so ${so.length}, sv ${saves.length}`);
+  return { era, wins, so, saves };
 }
 
 async function scrapeGames() {
@@ -280,7 +270,7 @@ async function runSection(name, fn) {
 }
 
 async function main() {
-  console.log("KBO scraper v5.1 start");
+  console.log("KBO scraper v5.2 start");
   console.log(`${new Date().toISOString()}\n`);
   await mkdir(DATA_DIR, { recursive: true });
   const results = {
@@ -295,7 +285,7 @@ async function main() {
     updatedAt: new Date().toISOString(),
     updatedAtKST: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
     season: new Date().getFullYear(),
-    version: "5.1",
+    version: "5.2",
     success, total: 4, errors,
   };
   await writeJson("meta", meta);
