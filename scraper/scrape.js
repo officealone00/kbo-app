@@ -258,14 +258,15 @@ async function scrapeGamesForDate(dateStr) {
 }
 
 async function scrapeGames() {
+  // KBO ScoreBoard는 ASP.NET 세션 기반이라 날짜 파라미터가 안 먹고,
+  // 이닝 테이블 팀명 파싱도 불안정함. 앱 폴백 UI("경기 정보 없음")로 위임.
   const todayStr = kstDateStr(0);
   const yesterdayStr = kstDateStr(-1);
-  const [todayData, yesterdayData] = await Promise.all([
-    scrapeGamesForDate(todayStr),
-    scrapeGamesForDate(yesterdayStr),
-  ]);
-  console.log(`OK games: today ${todayData.date} (${todayData.games.length}), yesterday ${yesterdayData.date} (${yesterdayData.games.length})`);
-  return { today: todayData, yesterday: yesterdayData };
+  console.log(`OK games: (skipped - fallback to app UI)`);
+  return {
+    today: { date: todayStr, games: [] },
+    yesterday: { date: yesterdayStr, games: [] },
+  };
 }
 
 async function writeJson(name, data) {
