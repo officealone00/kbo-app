@@ -1,6 +1,6 @@
 ﻿/**
- * KBO 리그 스크래퍼 (v5.3)
- * v5.2 → v5.3: 어제 경기 복원 (games.json 구조 {today, yesterday}) + KST 타임존 정확 처리
+ * KBO 리그 스크래퍼 (v5.4)
+ * v5.3 → v5.4: pitcher JSON 키를 앱과 맞춤 (wins→w, saves→sv)
  */
 
 import { writeFile, mkdir } from "node:fs/promises";
@@ -49,7 +49,6 @@ const int = (s) => {
   return Number.isFinite(v) ? v : 0;
 };
 
-// KST 기준 YYYYMMDD (서버/로컬 무관)
 function kstDateStr(offsetDays = 0) {
   const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
   kstNow.setUTCDate(kstNow.getUTCDate() + offsetDays);
@@ -194,8 +193,14 @@ async function fetchPitcherPage(sortKey) {
     players.push({
       name, team, role,
       era: get(tds, "ERA", num),
+      g: get(tds, "G", int),
       games: get(tds, "G", int),
-      wins, losses, w: wins, l: losses, sv: saves, hld: holds,
+      w: wins,
+      wins,
+      l: losses,
+      losses,
+      sv: saves,
+      hld: holds,
       ip: get(tds, "IP", num),
       h: get(tds, "H", int),
       hr: get(tds, "HR", int),
@@ -208,14 +213,14 @@ async function fetchPitcherPage(sortKey) {
 }
 
 async function scrapePitchers() {
-  const [era, wins, so, saves] = await Promise.all([
+  const [era, w, so, sv] = await Promise.all([
     fetchPitcherPage(""),
     fetchPitcherPage("W_CN"),
     fetchPitcherPage("KK_CN"),
     fetchPitcherPage("SV_CN"),
   ]);
-  console.log(`OK pitchers: era ${era.length}, w ${wins.length}, so ${so.length}, sv ${saves.length}`);
-  return { era, wins, so, saves };
+  console.log(`OK pitchers: era ${era.length}, w ${w.length}, so ${so.length}, sv ${sv.length}`);
+  return { era, w, so, sv };
 }
 
 async function scrapeGamesForDate(dateStr) {
@@ -281,7 +286,7 @@ async function runSection(name, fn) {
 }
 
 async function main() {
-  console.log("KBO scraper v5.3 start");
+  console.log("KBO scraper v5.4 start");
   console.log(`${new Date().toISOString()}\n`);
   await mkdir(DATA_DIR, { recursive: true });
   const results = {
@@ -296,7 +301,7 @@ async function main() {
     updatedAt: new Date().toISOString(),
     updatedAtKST: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
     season: new Date().getFullYear(),
-    version: "5.3",
+    version: "5.4",
     success, total: 4, errors,
   };
   await writeJson("meta", meta);

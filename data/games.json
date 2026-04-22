@@ -3,39 +3,39 @@
     "date": "20260422",
     "games": [
       {
-        "away": "-",
-        "home": "-",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정"
+        "away": "0",
+        "home": "0",
+        "awayScore": 1,
+        "homeScore": 10,
+        "status": "종료"
       },
       {
-        "away": "-",
-        "home": "-",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정"
+        "away": "0",
+        "home": "0",
+        "awayScore": 14,
+        "homeScore": 8,
+        "status": "종료"
       },
       {
-        "away": "-",
-        "home": "-",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정"
+        "away": "0",
+        "home": "0",
+        "awayScore": 5,
+        "homeScore": 6,
+        "status": "종료"
       },
       {
-        "away": "-",
-        "home": "-",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정"
+        "away": "0",
+        "home": "0",
+        "awayScore": 5,
+        "homeScore": 13,
+        "status": "종료"
       },
       {
-        "away": "-",
-        "home": "-",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정"
+        "away": "0",
+        "home": "0",
+        "awayScore": 8,
+        "homeScore": 2,
+        "status": "종료"
       }
     ]
   },
@@ -43,39 +43,39 @@
     "date": "20260421",
     "games": [
       {
-        "away": "-",
-        "home": "-",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정"
+        "away": "0",
+        "home": "0",
+        "awayScore": 1,
+        "homeScore": 10,
+        "status": "종료"
       },
       {
-        "away": "-",
-        "home": "-",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정"
+        "away": "0",
+        "home": "0",
+        "awayScore": 14,
+        "homeScore": 8,
+        "status": "종료"
       },
       {
-        "away": "-",
-        "home": "-",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정"
+        "away": "0",
+        "home": "0",
+        "awayScore": 5,
+        "homeScore": 6,
+        "status": "종료"
       },
       {
-        "away": "-",
-        "home": "-",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정"
+        "away": "0",
+        "home": "0",
+        "awayScore": 5,
+        "homeScore": 13,
+        "status": "종료"
       },
       {
-        "away": "-",
-        "home": "-",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정"
+        "away": "0",
+        "home": "0",
+        "awayScore": 8,
+        "homeScore": 2,
+        "status": "종료"
       }
     ]
   }
