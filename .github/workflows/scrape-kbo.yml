@@ -34,14 +34,31 @@ jobs:
         run: npm start
 
       - name: Commit updated data
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/
           if git diff --cached --quiet; then
             echo "no data change"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
             git commit -m "chore(data): KBO data update ${TIMESTAMP}"
             git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # 데이터가 실제로 바뀐 경우에만 jsdelivr CDN 캐시 비우기
+      # → 사용자가 다음날 앱 켜면 항상 최신 데이터 자동 반영
+      - name: Purge jsdelivr cache
+        if: steps.commit.outputs.changed == 'true'
+        run: |
+          # jsdelivr는 git push 직후 곧바로 purge하면 옛 파일이 다시 캐싱될 수 있음
+          # GitHub Pages/raw가 새 커밋을 인식할 시간을 잠깐 줌
+          sleep 15
+          for f in standings batters pitchers games meta; do
+            echo "Purging $f.json ..."
+            curl -fsS "https://purge.jsdelivr.net/gh/officealone00/kbo-app@main/data/$f.json" || true
+            echo ""
+          done
