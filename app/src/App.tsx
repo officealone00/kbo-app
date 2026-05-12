@@ -3,6 +3,7 @@ import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-rou
 import StandingsPage from '@/pages/StandingsPage';
 import BattersPage from '@/pages/BattersPage';
 import PitchersPage from '@/pages/PitchersPage';
+import GamesPage from '@/pages/GamesPage';
 import TeamReportPage from '@/pages/TeamReportPage';
 import BottomNav from '@/components/BottomNav';
 import FavoriteTeamModal from '@/components/FavoriteTeamModal';
@@ -49,6 +50,7 @@ function AppShell() {
           <Route path="/" element={<StandingsPage />} />
           <Route path="/batters" element={<BattersPage />} />
           <Route path="/pitchers" element={<PitchersPage />} />
+          <Route path="/games" element={<GamesPage />} />
           <Route path="/report" element={<TeamReportPage />} />
         </Routes>
       </div>
