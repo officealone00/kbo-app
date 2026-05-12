@@ -1,6 +1,8 @@
 ﻿/**
- * KBO 리그 스크래퍼 (v5.4)
- * v5.3 → v5.4: pitcher JSON 키를 앱과 맞춤 (wins→w, saves→sv)
+ * KBO 리그 스크래퍼 (v5.5)
+ * v5.4 → v5.5: games 스크래핑 재활성화
+ *   - ScoreBoard.aspx 호출에 Referer 헤더 추가 (KBO 사이트 Referer 검증 대응)
+ *   - 어제/오늘 병렬 호출, 각각 fail-safe → 실패해도 앱 폴백 UI로 자동 위임
  */
 
 import { writeFile, mkdir } from "node:fs/promises";
@@ -13,13 +15,14 @@ const RETRY = 3;
 const RETRY_DELAY_MS = 2000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function fetchHtml(url, attempt = 1) {
+async function fetchHtml(url, attempt = 1, extraHeaders = {}) {
   try {
     const res = await fetch(url, {
       headers: {
         "User-Agent": UA,
         Accept: "text/html,application/xhtml+xml",
         "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        ...extraHeaders,
       },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -33,7 +36,7 @@ async function fetchHtml(url, attempt = 1) {
     if (attempt < RETRY) {
       console.warn(`  retry ${attempt}/${RETRY}: ${e.message}`);
       await sleep(RETRY_DELAY_MS);
-      return fetchHtml(url, attempt + 1);
+      return fetchHtml(url, attempt + 1, extraHeaders);
     }
     throw new Error(`${RETRY} retries failed: ${e.message}`);
   }
@@ -224,8 +227,18 @@ async function scrapePitchers() {
 }
 
 async function scrapeGamesForDate(dateStr) {
+  // KBO ScoreBoard는 Referer 검증을 함 → Schedule 페이지에서 온 것처럼 위장
   const url = `https://www.koreabaseball.com/Schedule/ScoreBoard.aspx?searchScDate=${dateStr}`;
-  const html = await fetchHtml(url);
+  const html = await fetchHtml(url, 1, {
+    Referer: "https://www.koreabaseball.com/Schedule/Schedule.aspx",
+  });
+
+  // 짧은 응답 = 에러 페이지 가능성
+  if (!html || html.length < 1000) {
+    console.warn(`  games ${dateStr}: response too short (${html?.length || 0}B)`);
+    return { date: dateStr, games: [] };
+  }
+
   const $ = load(html);
   const games = [];
   $("table").each((_, t) => {
@@ -249,8 +262,10 @@ async function scrapeGamesForDate(dateStr) {
     if (away.team === "TEAM" || home.team === "TEAM") return;
     const bothScored = away.score !== null && home.score !== null;
     games.push({
-      away: away.team, home: home.team,
-      awayScore: away.score, homeScore: home.score,
+      away: away.team,
+      home: home.team,
+      awayScore: away.score,
+      homeScore: home.score,
       status: bothScored ? "종료" : "예정",
     });
   });
@@ -258,15 +273,26 @@ async function scrapeGamesForDate(dateStr) {
 }
 
 async function scrapeGames() {
-  // KBO ScoreBoard는 ASP.NET 세션 기반이라 날짜 파라미터가 안 먹고,
-  // 이닝 테이블 팀명 파싱도 불안정함. 앱 폴백 UI("경기 정보 없음")로 위임.
+  // 어제/오늘 두 날짜를 병렬 시도. 실패해도 빈 배열로 fail-safe.
+  // (앱은 빈 배열일 때 "경기 정보 없음" UI로 자동 폴백)
   const todayStr = kstDateStr(0);
   const yesterdayStr = kstDateStr(-1);
-  console.log(`OK games: (skipped - fallback to app UI)`);
-  return {
-    today: { date: todayStr, games: [] },
-    yesterday: { date: yesterdayStr, games: [] },
-  };
+
+  const safeFetch = (dateStr) =>
+    scrapeGamesForDate(dateStr).catch((e) => {
+      console.warn(`  games ${dateStr} failed:`, e.message);
+      return { date: dateStr, games: [] };
+    });
+
+  const [yesterday, today] = await Promise.all([
+    safeFetch(yesterdayStr),
+    safeFetch(todayStr),
+  ]);
+
+  console.log(
+    `OK games: yesterday ${yesterday.games.length}, today ${today.games.length}`
+  );
+  return { today, yesterday };
 }
 
 async function writeJson(name, data) {
@@ -287,7 +313,7 @@ async function runSection(name, fn) {
 }
 
 async function main() {
-  console.log("KBO scraper v5.4 start");
+  console.log("KBO scraper v5.5 start");
   console.log(`${new Date().toISOString()}\n`);
   await mkdir(DATA_DIR, { recursive: true });
   const results = {
@@ -302,7 +328,7 @@ async function main() {
     updatedAt: new Date().toISOString(),
     updatedAtKST: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
     season: new Date().getFullYear(),
-    version: "5.4",
+    version: "5.5",
     success, total: 4, errors,
   };
   await writeJson("meta", meta);
