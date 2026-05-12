@@ -1,10 +1,9 @@
 ﻿/**
- * KBO 리그 스크래퍼 (v5.8)
- * v5.7 → v5.8: ASMX 응답 정확한 파서 적용
- *   - 응답이 { rows: [{ row: [{Text, Class}] }] } 형식임을 확인
- *   - 셀의 Class 로 의미 구분 (day/time/play/relay/etc)
- *   - 날짜 셀 RowSpan 처리: 같은 날 N경기 중 첫 row만 day 셀 보유 → 나머지 row는 currentDate 유지
- *   - play 셀 HTML에서 팀명/점수 추출 (lose/win/same/cancel 클래스 활용)
+ * KBO 리그 스크래퍼 (v5.9)
+ * v5.8 → v5.9: 0-0 시작 전 상태 처리 버그 fix
+ *   - play 셀에서 lose/win 클래스가 하나라도 있을 때만 "종료"
+ *   - same/same(0-0) 또는 클래스 없음 = "예정" 처리 + 점수 null
+ *   - 시간(time) 셀이 있어도 score 클래스 없으면 경기 시작 전
  */
 
 import { writeFile, mkdir } from "node:fs/promises";
@@ -363,16 +362,22 @@ function extractGamesFromAsmxData(data, year, month) {
       }
 
       // 점수 추출: lose/win/same 클래스의 span에서
+      // - lose/win 클래스가 하나라도 있으면 → 경기 결과 결정됨 (종료)
+      // - same/same(0-0)만 있으면 → 경기 시작 전/직전 placeholder ("예정"으로 처리)
       const scoreSpans = spans.filter(
         (s) => /(?:^|\s)(lose|win|same)(?:\s|$)/.test(s.cls) && /^\d+$/.test(s.text)
       );
-      if (scoreSpans.length === 2) {
+      const hasResultClass = spans.some((s) =>
+        /(?:^|\s)(lose|win)(?:\s|$)/.test(s.cls)
+      );
+      if (scoreSpans.length === 2 && hasResultClass) {
         awayScore = parseInt(scoreSpans[0].text, 10);
         homeScore = parseInt(scoreSpans[1].text, 10);
         if (Number.isFinite(awayScore) && Number.isFinite(homeScore)) {
           status = "종료";
         }
       }
+      // hasResultClass 가 false면 score null + status "예정" 유지
 
       // 취소/연기 등 특수 상태 (play 셀 텍스트 전체에서 확인)
       const fullText = clean($play.text());
@@ -480,7 +485,7 @@ async function runSection(name, fn) {
 }
 
 async function main() {
-  console.log("KBO scraper v5.8 start");
+  console.log("KBO scraper v5.9 start");
   console.log(`${new Date().toISOString()}\n`);
   await mkdir(DATA_DIR, { recursive: true });
   const results = {
@@ -495,7 +500,7 @@ async function main() {
     updatedAt: new Date().toISOString(),
     updatedAtKST: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
     season: new Date().getFullYear(),
-    version: "5.8",
+    version: "5.9",
     success, total: 4, errors,
   };
   await writeJson("meta", meta);
