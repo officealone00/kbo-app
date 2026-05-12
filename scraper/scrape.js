@@ -1,8 +1,9 @@
 ﻿/**
- * KBO 리그 스크래퍼 (v5.5)
- * v5.4 → v5.5: games 스크래핑 재활성화
- *   - ScoreBoard.aspx 호출에 Referer 헤더 추가 (KBO 사이트 Referer 검증 대응)
- *   - 어제/오늘 병렬 호출, 각각 fail-safe → 실패해도 앱 폴백 UI로 자동 위임
+ * KBO 리그 스크래퍼 (v5.6)
+ * v5.5 → v5.6: games 파서 강화
+ *   - KBO 10개팀 화이트리스트로 placeholder/빈 슬롯 차단
+ *   - 0-0 동점은 경기 시작 전 placeholder로 간주 ("예정" 처리)
+ *   - 진짜 KBO 팀명이 양쪽에 다 있어야만 games[]에 추가
  */
 
 import { writeFile, mkdir } from "node:fs/promises";
@@ -226,6 +227,12 @@ async function scrapePitchers() {
   return { era, w, so, sv };
 }
 
+// KBO 10개 팀 약칭 (ScoreBoard에 표시되는 짧은 이름 기준)
+const KBO_TEAMS = new Set([
+  "LG", "두산", "SSG", "KT", "KIA",
+  "NC", "롯데", "한화", "키움", "삼성",
+]);
+
 async function scrapeGamesForDate(dateStr) {
   // KBO ScoreBoard는 Referer 검증을 함 → Schedule 페이지에서 온 것처럼 위장
   const url = `https://www.koreabaseball.com/Schedule/ScoreBoard.aspx?searchScDate=${dateStr}`;
@@ -248,6 +255,7 @@ async function scrapeGamesForDate(dateStr) {
     if (!["R", "H", "E"].every((k) => headers.includes(k))) return;
     const rows = getDataRows($, $t);
     if (rows.length < 2) return;
+
     const parseRow = ($row) => {
       const tds = $row.find("td").map((_, td) => clean($(td).text())).get();
       const team = tds[0] || "";
@@ -256,17 +264,27 @@ async function scrapeGamesForDate(dateStr) {
       const score = R === "" || R === "-" || R === undefined ? null : parseInt(R, 10);
       return { team, score: Number.isFinite(score) ? score : null };
     };
+
     const away = parseRow($(rows[0]));
     const home = parseRow($(rows[1]));
-    if (!away.team || !home.team) return;
-    if (away.team === "TEAM" || home.team === "TEAM") return;
-    const bothScored = away.score !== null && home.score !== null;
+
+    // 화이트리스트 검증: 양팀 모두 실제 KBO 팀명이어야 함
+    // (placeholder "0", "-" 같은 빈 슬롯 차단)
+    if (!KBO_TEAMS.has(away.team) || !KBO_TEAMS.has(home.team)) return;
+
+    // 점수가 둘 다 0이면서 동점인 경우는 보통 경기 시작 전 placeholder
+    // 실제 0-0 무승부는 KBO 정규시즌엔 12회까지 가서 무승부 처리되므로 점수 두 줄이 정상 출력됨.
+    // 단, 안전을 위해 둘 다 null이거나 둘 다 0이면 "예정" 처리.
+    const validScore = (s) => s !== null && Number.isFinite(s);
+    const bothScored = validScore(away.score) && validScore(home.score);
+    const looksLikeStarting = !bothScored || (away.score === 0 && home.score === 0);
+
     games.push({
       away: away.team,
       home: home.team,
-      awayScore: away.score,
-      homeScore: home.score,
-      status: bothScored ? "종료" : "예정",
+      awayScore: bothScored ? away.score : null,
+      homeScore: bothScored ? home.score : null,
+      status: looksLikeStarting ? "예정" : "종료",
     });
   });
   return { date: dateStr, games };
@@ -313,7 +331,7 @@ async function runSection(name, fn) {
 }
 
 async function main() {
-  console.log("KBO scraper v5.5 start");
+  console.log("KBO scraper v5.6 start");
   console.log(`${new Date().toISOString()}\n`);
   await mkdir(DATA_DIR, { recursive: true });
   const results = {
@@ -328,7 +346,7 @@ async function main() {
     updatedAt: new Date().toISOString(),
     updatedAtKST: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
     season: new Date().getFullYear(),
-    version: "5.5",
+    version: "5.6",
     success, total: 4, errors,
   };
   await writeJson("meta", meta);
