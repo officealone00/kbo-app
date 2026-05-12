@@ -1,9 +1,10 @@
 ﻿/**
- * KBO 리그 스크래퍼 (v5.7)
- * v5.6 → v5.7: games 가져오기 - KBO 공식 ASMX API로 전환
- *   - POST /ws/Schedule.asmx/GetScheduleList (월별 일정/결과)
- *   - 응답 구조 자동 탐지 + 디버그 로그 (1차 푸시는 응답 구조 파악용)
- *   - 모든 단계에서 fail-safe → 실패 시 빈 배열로 폴백
+ * KBO 리그 스크래퍼 (v5.8)
+ * v5.7 → v5.8: ASMX 응답 정확한 파서 적용
+ *   - 응답이 { rows: [{ row: [{Text, Class}] }] } 형식임을 확인
+ *   - 셀의 Class 로 의미 구분 (day/time/play/relay/etc)
+ *   - 날짜 셀 RowSpan 처리: 같은 날 N경기 중 첫 row만 day 셀 보유 → 나머지 row는 currentDate 유지
+ *   - play 셀 HTML에서 팀명/점수 추출 (lose/win/same/cancel 클래스 활용)
  */
 
 import { writeFile, mkdir } from "node:fs/promises";
@@ -275,10 +276,6 @@ async function fetchKboAsmxSchedule(year, month) {
   const text = await res.text();
   console.log(`  asmx ${year}-${month}: ${text.length}B`);
 
-  // 디버그 프리뷰
-  const preview = text.substring(0, 400).replace(/\s+/g, " ");
-  console.log(`  preview: ${preview}`);
-
   // 1단계: JSON 파싱
   let data;
   try {
@@ -299,147 +296,128 @@ async function fetchKboAsmxSchedule(year, month) {
   return data;
 }
 
-// 응답 데이터에서 게임 추출 (응답 구조 자동 탐지)
+// 응답 데이터에서 게임 추출
+// 응답 구조 (v5.7 디버그 로그로 확인):
+//   { rows: [ { row: [ {Text, Class}, ... ] } ] }
+// 각 row가 한 경기. cell은 Class로 의미 구분:
+//   day  → "05.01(금)" 형식 날짜 (RowSpan으로 그날 경기 수만큼 묶임)
+//   time → "<b>17:00</b>"
+//   play → "<span>NC</span><em><span class='lose'>1</span><span>vs</span><span class='win'>2</span></em><span>두산</span>"
+//   기타: relay/highlight/tv/radio/stadium/note
 function extractGamesFromAsmxData(data, year, month) {
   const games = [];
-
-  if (!data) {
-    console.log(`  [parse] data is null/undefined`);
+  if (!data || !Array.isArray(data.rows)) {
+    console.log(`  [parse] no rows array`);
     return games;
   }
 
-  // 케이스 A: { rows: [ { row: [ {Text: ...}, ... ] } ] } 형식
-  if (data.rows && Array.isArray(data.rows)) {
-    console.log(`  [parse] rows format, count=${data.rows.length}`);
-    if (data.rows[0]) {
-      const sample = JSON.stringify(data.rows[0]).substring(0, 300);
-      console.log(`  [parse] row[0] sample: ${sample}`);
+  let currentDay = null; // RowSpan 처리: day 셀이 없는 row는 직전 day 값을 그대로 사용
+
+  for (const r of data.rows) {
+    const cells = r.row || [];
+    if (!Array.isArray(cells) || cells.length === 0) continue;
+
+    // Class별로 셀 인덱싱 (동일 Class 중복 시 첫 번째 사용)
+    const cellByClass = {};
+    for (const c of cells) {
+      const cls = (c && c.Class) || "";
+      if (cls && !cellByClass[cls]) cellByClass[cls] = c;
     }
-    for (const r of data.rows) {
-      const cells = r.row || r;
-      if (!Array.isArray(cells)) continue;
-      const cellTexts = cells.map((c) =>
-        c && typeof c === "object" ? clean(c.Text || c.text || "") : clean(String(c))
+
+    // day 셀이 있으면 currentDay 갱신
+    if (cellByClass.day) {
+      const dayText = clean(cellByClass.day.Text || "");
+      const m = dayText.match(/(\d{1,2})\.(\d{1,2})/);
+      if (m) currentDay = parseInt(m[2], 10);
+    }
+    if (!currentDay) continue;
+
+    // play 셀이 있어야 경기 row
+    const playCell = cellByClass.play;
+    if (!playCell || !playCell.Text) continue;
+
+    const playHtml = playCell.Text;
+
+    // cheerio로 play HTML 파싱
+    let away = null;
+    let home = null;
+    let awayScore = null;
+    let homeScore = null;
+    let status = "예정";
+
+    try {
+      const $ = load(`<div id="play">${playHtml}</div>`);
+      const $play = $("#play");
+
+      // 모든 span 텍스트 수집 (팀명과 점수가 span에 들어있음)
+      const spans = $play.find("span").map((_, el) => ({
+        text: clean($(el).text()),
+        cls: $(el).attr("class") || "",
+      })).get();
+
+      // 팀명 추출: KBO 팀명에 매치되는 span 찾기 (보통 2개)
+      const teamSpans = spans.filter((s) => KBO_TEAMS.has(s.text));
+      if (teamSpans.length >= 2) {
+        away = teamSpans[0].text;
+        home = teamSpans[1].text;
+      }
+
+      // 점수 추출: lose/win/same 클래스의 span에서
+      const scoreSpans = spans.filter(
+        (s) => /(?:^|\s)(lose|win|same)(?:\s|$)/.test(s.cls) && /^\d+$/.test(s.text)
       );
-      const g = parseGameRowCells(cellTexts, year, month);
-      if (g) games.push(g);
+      if (scoreSpans.length === 2) {
+        awayScore = parseInt(scoreSpans[0].text, 10);
+        homeScore = parseInt(scoreSpans[1].text, 10);
+        if (Number.isFinite(awayScore) && Number.isFinite(homeScore)) {
+          status = "종료";
+        }
+      }
+
+      // 취소/연기 등 특수 상태 (play 셀 텍스트 전체에서 확인)
+      const fullText = clean($play.text());
+      if (/취소|연기|우천/.test(fullText)) {
+        status = "취소";
+        awayScore = null;
+        homeScore = null;
+      }
+    } catch (e) {
+      console.warn(`  [parse] play HTML parse error:`, e.message);
+      continue;
     }
-  }
-  // 케이스 B: 직접 배열 [{...}, ...]
-  else if (Array.isArray(data)) {
-    console.log(`  [parse] array format, count=${data.length}`);
-    if (data[0]) {
-      console.log(`  [parse] item[0]: ${JSON.stringify(data[0]).substring(0, 300)}`);
+
+    if (!away || !home) continue;
+
+    const gameDate = `${year}${String(month).padStart(2, "0")}${String(currentDay).padStart(2, "0")}`;
+
+    // 시간 정보 (있으면 추가)
+    let gameTime = null;
+    if (cellByClass.time) {
+      const tHtml = cellByClass.time.Text || "";
+      const tClean = tHtml.replace(/<[^>]+>/g, "");
+      const tMatch = tClean.match(/(\d{1,2}:\d{2})/);
+      if (tMatch) gameTime = tMatch[1];
     }
-    for (const item of data) {
-      const g = parseGameObject(item, year, month);
-      if (g) games.push(g);
+
+    // 구장 (있으면 추가)
+    let stadium = null;
+    if (cellByClass.stadium) {
+      stadium = clean((cellByClass.stadium.Text || "").replace(/<[^>]+>/g, ""));
     }
-  }
-  // 케이스 C: HTML 문자열
-  else if (typeof data === "string") {
-    console.log(`  [parse] html string, len=${data.length}`);
-    console.log(`  [parse] html preview: ${data.substring(0, 300).replace(/\s+/g, " ")}`);
-    // 향후 cheerio 파싱 추가
-  }
-  // 케이스 D: 객체 (기타)
-  else {
-    console.log(`  [parse] unknown object format`);
-    console.log(`  [parse] keys: ${Object.keys(data).join(", ")}`);
-    const sample = JSON.stringify(data).substring(0, 400);
-    console.log(`  [parse] sample: ${sample}`);
+
+    games.push({
+      gameDate,
+      away,
+      home,
+      awayScore,
+      homeScore,
+      status,
+      ...(gameTime ? { time: gameTime } : {}),
+      ...(stadium ? { stadium } : {}),
+    });
   }
 
   return games;
-}
-
-// row의 셀 텍스트 배열에서 게임 1건 추출
-// 일반적인 KBO 일정 컬럼: [날짜, 시간, 경기, 게임센터, 하이라이트, TV, 라디오, 구장, 비고]
-function parseGameRowCells(cells, year, month) {
-  if (!cells || cells.length < 3) return null;
-
-  // 날짜 추출: "MM.DD(요일)" 형식 흔함, 또는 "DD" 만 있을 수도
-  let day = null;
-  const dateCell = cells[0] || "";
-  const dateMatch = dateCell.match(/(\d{1,2})[\.월](\d{1,2})|(\d{1,2})\(/) ||
-                    dateCell.match(/(\d{1,2})/);
-  if (dateMatch) {
-    // 가장 마지막 매치된 그룹이 일(day)일 가능성
-    const candidates = dateMatch.filter(Boolean).map(Number).filter(n => n >= 1 && n <= 31);
-    day = candidates[candidates.length - 1] || null;
-  }
-
-  // 경기 셀: "팀A vs 팀B" 또는 "팀A 7vs3 팀B" 등
-  // 보통 3번째 컬럼에 위치하지만 게임센터 링크 등으로 변형됨
-  let gameCellIdx = -1;
-  for (let i = 0; i < cells.length; i++) {
-    const c = cells[i];
-    if (!c) continue;
-    // "팀명 vs 팀명" 또는 "팀명 숫자 : 숫자 팀명" 패턴
-    if (/vs|VS|:|\d+\s*[:vsVS]/.test(c)) {
-      const teams = c.match(/[가-힣A-Z]+/g);
-      if (teams && teams.length >= 2 && teams.some(t => KBO_TEAMS.has(t))) {
-        gameCellIdx = i;
-        break;
-      }
-    }
-  }
-  if (gameCellIdx === -1) return null;
-
-  const gameCell = cells[gameCellIdx];
-  const teamTokens = (gameCell.match(/[가-힣A-Z]+/g) || []).filter(t => KBO_TEAMS.has(t));
-  if (teamTokens.length < 2) return null;
-
-  const away = teamTokens[0];
-  const home = teamTokens[1];
-
-  // 점수 추출
-  const scoreMatch = gameCell.match(/(\d+)\s*[:vsVS\-]+\s*(\d+)/);
-  let awayScore = null, homeScore = null, status = "예정";
-  if (scoreMatch) {
-    awayScore = parseInt(scoreMatch[1], 10);
-    homeScore = parseInt(scoreMatch[2], 10);
-    if (Number.isFinite(awayScore) && Number.isFinite(homeScore)) {
-      status = "종료";
-    }
-  }
-
-  if (!day) return null;
-
-  const gameDate = `${year}${String(month).padStart(2, "0")}${String(day).padStart(2, "0")}`;
-
-  return {
-    gameDate,
-    away,
-    home,
-    awayScore,
-    homeScore,
-    status,
-  };
-}
-
-// 객체 형식 응답에서 게임 1건 추출
-function parseGameObject(obj, year, month) {
-  if (!obj || typeof obj !== "object") return null;
-
-  // 일반적인 키 이름들 시도
-  const gameDate = obj.gameDate || obj.gdate || obj.date || obj.GAME_DATE || null;
-  const away = normalizeTeam(obj.awayTeam || obj.away || obj.AWAY_NM || obj.atname);
-  const home = normalizeTeam(obj.homeTeam || obj.home || obj.HOME_NM || obj.htname);
-  if (!away || !home) return null;
-
-  const awayScore = obj.awayScore ?? obj.atScore ?? obj.AWAY_SCORE ?? null;
-  const homeScore = obj.homeScore ?? obj.htScore ?? obj.HOME_SCORE ?? null;
-
-  const ok = Number.isFinite(awayScore) && Number.isFinite(homeScore);
-  return {
-    gameDate: String(gameDate || ""),
-    away,
-    home,
-    awayScore: ok ? Number(awayScore) : null,
-    homeScore: ok ? Number(homeScore) : null,
-    status: ok ? "종료" : "예정",
-  };
 }
 
 async function scrapeGames() {
@@ -455,7 +433,7 @@ async function scrapeGames() {
     try {
       const data = await fetchKboAsmxSchedule(year, m);
       const parsed = extractGamesFromAsmxData(data, year, m);
-      console.log(`  [parse] ${year}-${m}: ${parsed.length} games extracted`);
+      console.log(`  ${year}-${m}: ${parsed.length} games parsed`);
       allGames = allGames.concat(parsed);
     } catch (e) {
       console.warn(`  asmx ${year}-${m} 실패:`, e.message);
@@ -502,7 +480,7 @@ async function runSection(name, fn) {
 }
 
 async function main() {
-  console.log("KBO scraper v5.7 start");
+  console.log("KBO scraper v5.8 start");
   console.log(`${new Date().toISOString()}\n`);
   await mkdir(DATA_DIR, { recursive: true });
   const results = {
@@ -517,7 +495,7 @@ async function main() {
     updatedAt: new Date().toISOString(),
     updatedAtKST: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
     season: new Date().getFullYear(),
-    version: "5.7",
+    version: "5.8",
     success, total: 4, errors,
   };
   await writeJson("meta", meta);
