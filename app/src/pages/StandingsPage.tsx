@@ -83,13 +83,6 @@ export default function StandingsPage() {
         </div>
       )}
 
-      {/* 🎯 배너 #1 - 즐겨찾기 카드 아래 (최상단 노출용) */}
-      {favorite && !loading && (
-        <div className="px-5 mb-3">
-          <BannerAd />
-        </div>
-      )}
-
       {/* Error */}
       {error && (
         <div className="mx-5 mb-3 p-4 bg-toss-red/10 rounded-2xl">
@@ -187,13 +180,6 @@ export default function StandingsPage() {
                       {s.gamesBehind === 0 ? '-' : s.gamesBehind}
                     </span>
                   </div>
-
-                  {/* 🎯 배너 #2 - 5위와 6위 사이 인라인 (스크롤 중간 노출) */}
-                  {idx === 4 && (
-                    <div className="px-3 py-3 bg-toss-gray-50 border-b border-toss-gray-100">
-                      <BannerAd />
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -201,7 +187,7 @@ export default function StandingsPage() {
         </div>
       )}
 
-      {/* 🎯 배너 #3 - 순위표 하단 (기존 위치) */}
+      {/* 🎯 배너 - 순위표 하단에만 단일 노출 */}
       <div className="px-5 mb-4">
         <BannerAd />
       </div>

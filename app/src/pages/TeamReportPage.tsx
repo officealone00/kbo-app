@@ -1,7 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, TrendingUp, TrendingDown, Minus, Trophy, Target, Users, Swords } from 'lucide-react';
-import { api, type TeamStanding, type BattersData, type PitchersData, type GamesData } from '@/utils/api';
+import {
+  ChevronLeft,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Trophy,
+  Target,
+  Users,
+  Swords,
+  ClipboardCheck,
+  Activity,
+  Flame,
+} from 'lucide-react';
+import { api } from '@/utils/api';
 import { getFavoriteTeam } from '@/utils/storage';
 import { getTeam } from '@/data/teams';
 import { generateTeamReport, type TeamReport } from '@/utils/teamAnalytics';
@@ -53,7 +65,6 @@ export default function TeamReportPage() {
   const handleAdClose = () => {
     setAdShown(false);
     // 보상 못 받은 경우에만 홈으로 리턴
-    // (unlockedRef로 최신값 확인 - setState는 비동기)
     if (!unlockedRef.current) {
       navigate('/', { replace: true });
     }
@@ -75,8 +86,8 @@ export default function TeamReportPage() {
           <ChevronLeft size={24} />
         </button>
         <div>
-          <h1 className="toss-title text-[22px]">📊 상세 분석 리포트</h1>
-          <p className="toss-caption mt-0.5">{info.fullName}</p>
+          <h1 className="toss-title text-[22px]">📊 스카우팅 리포트</h1>
+          <p className="toss-caption mt-0.5">{info.fullName} · 야구 분석 전문가 코멘트</p>
         </div>
       </div>
 
@@ -103,11 +114,11 @@ export default function TeamReportPage() {
               {info.emoji}
             </div>
             <div className="relative">
-              <p className="text-xs font-semibold opacity-80 mb-1">✨ 프리미엄 리포트</p>
+              <p className="text-xs font-semibold opacity-80 mb-1">✨ 프리미엄 스카우팅 리포트</p>
               <p className="text-2xl font-bold mb-2">{info.fullName}</p>
               <p className="text-sm opacity-90 leading-relaxed">
-                팀 폼, 순위 전망, TOP 선수,<br />
-                최근 경기까지 상세 분석
+                팀 폼 · 타선 색깔 · 마운드 진단 ·<br />
+                매직넘버 · 강점/약점 진단까지
               </p>
             </div>
           </div>
@@ -115,10 +126,10 @@ export default function TeamReportPage() {
           {/* 리포트 미리보기 (흐림) */}
           <div className="mt-4 relative">
             <div className="space-y-3 filter blur-md pointer-events-none select-none">
+              <MockCard icon="🔍" title="스카우팅 진단" />
               <MockCard icon="🔥" title="팀 폼 분석" />
-              <MockCard icon="🎯" title="순위 전망" />
-              <MockCard icon="💪" title="TOP 선수" />
-              <MockCard icon="⚔️" title="최근 경기" />
+              <MockCard icon="💥" title="타선 색깔 진단" />
+              <MockCard icon="🎯" title="마운드 진단" />
             </div>
 
             {/* 중앙 CTA 버튼 */}
@@ -130,7 +141,7 @@ export default function TeamReportPage() {
                 </p>
                 <p className="text-xs text-toss-gray-600 mb-4 leading-relaxed">
                   짧은 광고 시청하고<br />
-                  상세 분석을 확인해보세요
+                  전문가급 분석을 확인해보세요
                 </p>
                 <button
                   onClick={() => setAdShown(true)}
@@ -153,16 +164,40 @@ export default function TeamReportPage() {
       {/* 리포트 본문 (광고 시청 완료 후) */}
       {!loading && unlocked && report && (
         <div className="px-5 py-6 pb-10 space-y-4">
-          {/* 인사이트 요약 */}
+          {/* 헤드라인 인사이트 */}
           <div
             className="rounded-2xl p-5 text-white"
             style={{ backgroundColor: info.color }}
           >
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-semibold opacity-80">💡 핵심 인사이트</span>
+              <span className="text-xs font-semibold opacity-80">💡 헤드라인</span>
             </div>
             <p className="text-base font-bold leading-relaxed">{report.insight}</p>
           </div>
+
+          {/* 0. 스카우팅 진단 (강점/약점/과제) */}
+          <Card icon={<ClipboardCheck size={18} />} title="스카우팅 진단" color={info.color}>
+            <div className="space-y-2.5">
+              <DiagnosisRow
+                tag="강점"
+                tagColor="#19B377"
+                tagBg="#E8F8F0"
+                text={report.diagnosis.strength}
+              />
+              <DiagnosisRow
+                tag="약점"
+                tagColor="#FF3B30"
+                tagBg="#FFF0EE"
+                text={report.diagnosis.weakness}
+              />
+              <DiagnosisRow
+                tag="과제"
+                tagColor="#3182F6"
+                tagBg="#E7F1FF"
+                text={report.diagnosis.agenda}
+              />
+            </div>
+          </Card>
 
           {/* 1. 팀 폼 */}
           <Card icon={<Trophy size={18} />} title="팀 폼 분석" color={info.color}>
@@ -202,7 +237,14 @@ export default function TeamReportPage() {
                 />
               </div>
 
-              <div className="mt-2 p-3 bg-toss-gray-50 rounded-xl">
+              {/* 홈/원정 진단 한 줄 */}
+              <div className="p-3 bg-toss-gray-50 rounded-xl">
+                <p className="text-xs text-toss-gray-700 leading-relaxed">
+                  📍 {report.form.homeAwayDiagnosis}
+                </p>
+              </div>
+
+              <div className="p-3 bg-toss-gray-50 rounded-xl">
                 <p className="text-xs text-toss-gray-600">
                   최근 10경기: <span className="font-bold text-toss-gray-900">{report.form.last10Record}</span>
                 </p>
@@ -219,11 +261,136 @@ export default function TeamReportPage() {
             </div>
           </Card>
 
-          {/* 배너 광고 중간 */}
-          <BannerAd />
+          {/* 2. 타선 색깔 진단 */}
+          {report.batting && (
+            <Card icon={<Flame size={18} />} title="타선 색깔 진단" color={info.color}>
+              <div className="space-y-3">
+                <div
+                  className="rounded-xl p-4 flex items-center gap-3"
+                  style={{ backgroundColor: info.bgLight }}
+                >
+                  <span style={{ fontSize: 32 }}>{report.batting.identityIcon}</span>
+                  <div>
+                    <p className="text-[11px] font-semibold" style={{ color: info.color }}>
+                      팀 타선 색깔
+                    </p>
+                    <p className="text-lg font-extrabold" style={{ color: info.color }}>
+                      {report.batting.identityLabel}
+                    </p>
+                  </div>
+                </div>
 
-          {/* 2. 순위 전망 */}
-          <Card icon={<Target size={18} />} title="순위 전망" color={info.color}>
+                {/* 4축 지표 */}
+                <div className="grid grid-cols-2 gap-2">
+                  <MetricBox
+                    label="🎯 컨택 (상위 5인 평균 타율)"
+                    value={report.batting.topAvg.toFixed(3)}
+                    sub={report.batting.topAvg >= 0.31 ? '리그 최정상' : report.batting.topAvg >= 0.29 ? '리그 정상권' : '평이'}
+                  />
+                  <MetricBox
+                    label="💥 장타 (상위 3인 홈런)"
+                    value={`${report.batting.topHR}개`}
+                    sub={report.batting.topHR >= 45 ? '리그 최정상' : report.batting.topHR >= 25 ? '리그 정상권' : '보강 필요'}
+                  />
+                  <MetricBox
+                    label="🎯 타점 (상위 3인 합)"
+                    value={`${report.batting.topRBI}점`}
+                    sub="득점 생산력"
+                  />
+                  <MetricBox
+                    label="💨 기동 (상위 3인 도루)"
+                    value={`${report.batting.topSB}개`}
+                    sub={report.batting.topSB >= 40 ? '리그 최정상' : report.batting.topSB >= 25 ? '리그 정상권' : '평이'}
+                  />
+                </div>
+
+                <CoachComment text={report.batting.diagnosis} color={info.color} />
+              </div>
+            </Card>
+          )}
+
+          {/* 3. 마운드 진단 */}
+          {report.pitching && (
+            <Card icon={<Activity size={18} />} title="마운드 진단" color={info.color}>
+              <div className="space-y-3">
+                <div
+                  className="rounded-xl p-4 flex items-center gap-3"
+                  style={{ backgroundColor: info.bgLight }}
+                >
+                  <span style={{ fontSize: 32 }}>{report.pitching.identityIcon}</span>
+                  <div>
+                    <p className="text-[11px] font-semibold" style={{ color: info.color }}>
+                      마운드 색깔
+                    </p>
+                    <p className="text-lg font-extrabold" style={{ color: info.color }}>
+                      {report.pitching.identityLabel}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 선발 ERA + 불펜 안정도 + 탈삼진 */}
+                <div className="grid grid-cols-3 gap-2">
+                  <MetricBox
+                    label="🎯 선발 ERA"
+                    value={report.pitching.starterERA > 0 ? report.pitching.starterERA.toFixed(2) : '-'}
+                    sub={
+                      report.pitching.starterERA > 0 && report.pitching.starterERA <= 3.0
+                        ? '리그 최정상'
+                        : report.pitching.starterERA <= 3.8
+                        ? '리그 정상권'
+                        : report.pitching.starterERA <= 4.5
+                        ? '평이'
+                        : '보강 필요'
+                    }
+                  />
+                  <MetricBox
+                    label="🔥 불펜 안정도"
+                    value={`${report.pitching.bullpenStability}`}
+                    sub={
+                      report.pitching.bullpenStability >= 75
+                        ? '안정'
+                        : report.pitching.bullpenStability >= 55
+                        ? '준수'
+                        : report.pitching.bullpenStability >= 35
+                        ? '변수'
+                        : '보강 시급'
+                    }
+                  />
+                  <MetricBox
+                    label="⚡ 탈삼진 (상위3)"
+                    value={`${report.pitching.topSO}K`}
+                    sub={
+                      report.pitching.topSO >= 350 ? '파워피칭' : report.pitching.topSO >= 220 ? '준수' : '평이'
+                    }
+                  />
+                </div>
+
+                {/* 불펜 안정도 시각화 바 */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-toss-gray-600">불펜 운영 안정도</span>
+                    <span className="text-xs font-bold" style={{ color: info.color }}>
+                      {report.pitching.bullpenStability}/100
+                    </span>
+                  </div>
+                  <div className="h-2 bg-toss-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${report.pitching.bullpenStability}%`,
+                        backgroundColor: info.color,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <CoachComment text={report.pitching.diagnosis} color={info.color} />
+              </div>
+            </Card>
+          )}
+
+          {/* 4. 순위 전망 + 매직넘버 */}
+          <Card icon={<Target size={18} />} title="순위 전망 · 매직넘버" color={info.color}>
             <div className="space-y-3">
               <div
                 className="rounded-xl p-4 text-center"
@@ -235,6 +402,9 @@ export default function TeamReportPage() {
                 <p className="text-4xl font-extrabold mt-1" style={{ color: info.color }}>
                   {report.outlook.currentRank}위
                 </p>
+                <p className="text-[11px] text-toss-gray-600 mt-1">
+                  잔여 {report.outlook.gamesRemaining}경기
+                </p>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
@@ -243,7 +413,40 @@ export default function TeamReportPage() {
                 <GapBox label="5위까지" gap={report.outlook.gapToPostseason} />
               </div>
 
-              <div className="mt-2 p-3 bg-toss-gray-50 rounded-xl">
+              {/* 매직넘버 / 트래직넘버 */}
+              {report.outlook.magicNumber !== null && (
+                <div className="rounded-xl p-3 flex items-center gap-3" style={{ backgroundColor: '#E8F8F0' }}>
+                  <span className="text-xl">🪄</span>
+                  <div className="flex-1">
+                    <p className="text-[11px] font-semibold text-[#19B377]">매직넘버 (포스트시즌 확정)</p>
+                    <p className="text-xs text-toss-gray-700 mt-0.5">
+                      잔여 {report.outlook.gamesRemaining}경기에서{' '}
+                      <span className="font-extrabold text-[#19B377]">
+                        {report.outlook.magicNumber}승
+                      </span>
+                      을 추가하면 5위 진입 확정
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {report.outlook.tragicNumber !== null && (
+                <div className="rounded-xl p-3 flex items-center gap-3" style={{ backgroundColor: '#FFF4E6' }}>
+                  <span className="text-xl">⏳</span>
+                  <div className="flex-1">
+                    <p className="text-[11px] font-semibold text-[#FF9500]">추격 필요승수</p>
+                    <p className="text-xs text-toss-gray-700 mt-0.5">
+                      5위 추격을 위해 잔여 경기 중{' '}
+                      <span className="font-extrabold text-[#FF9500]">
+                        최소 {report.outlook.tragicNumber}승
+                      </span>{' '}
+                      필요
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="p-3 bg-toss-gray-50 rounded-xl">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs text-toss-gray-600">포스트시즌 진출</span>
                   <ProbabilityBadge prob={report.outlook.postseasonProbability} />
@@ -255,10 +458,12 @@ export default function TeamReportPage() {
                   </span>
                 </p>
               </div>
+
+              <CoachComment text={report.outlook.outlookComment} color={info.color} />
             </div>
           </Card>
 
-          {/* 3. TOP 선수 */}
+          {/* 5. TOP 선수 */}
           <Card icon={<Users size={18} />} title="팀 내 TOP 선수" color={info.color}>
             <div className="grid grid-cols-2 gap-2">
               <PlayerBox
@@ -284,7 +489,7 @@ export default function TeamReportPage() {
             </div>
           </Card>
 
-          {/* 4. 최근 경기 */}
+          {/* 6. 최근 경기 */}
           {report.recentGames.length > 0 && (
             <Card icon={<Swords size={18} />} title="최근 경기" color={info.color}>
               <div className="space-y-2">
@@ -427,6 +632,16 @@ function StatBox({ label, value, good }: { label: string; value: string; good: b
   );
 }
 
+function MetricBox({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="bg-toss-gray-50 rounded-xl p-3">
+      <p className="text-[10px] text-toss-gray-600 leading-tight">{label}</p>
+      <p className="text-lg font-extrabold tabular-nums text-toss-gray-900 mt-1">{value}</p>
+      <p className="text-[10px] text-toss-gray-500 mt-0.5">{sub}</p>
+    </div>
+  );
+}
+
 function GapBox({ label, gap }: { label: string; gap: number }) {
   return (
     <div className="bg-toss-gray-50 rounded-xl p-2.5 text-center">
@@ -478,6 +693,46 @@ function PlayerBox({
       <p className="text-xs font-semibold mt-0.5 tabular-nums" style={{ color }}>
         {player.stat} {player.value}
       </p>
+    </div>
+  );
+}
+
+function DiagnosisRow({
+  tag,
+  tagColor,
+  tagBg,
+  text,
+}: {
+  tag: string;
+  tagColor: string;
+  tagBg: string;
+  text: string;
+}) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <span
+        className="flex-shrink-0 text-[10px] font-extrabold px-2 py-1 rounded-md"
+        style={{ color: tagColor, backgroundColor: tagBg }}
+      >
+        {tag}
+      </span>
+      <p className="text-[13px] text-toss-gray-800 leading-relaxed flex-1 pt-0.5">
+        {text}
+      </p>
+    </div>
+  );
+}
+
+function CoachComment({ text, color }: { text: string; color: string }) {
+  return (
+    <div
+      className="rounded-xl p-3 flex gap-2"
+      style={{ borderLeft: `3px solid ${color}`, backgroundColor: '#FAFBFC' }}
+    >
+      <span className="text-[11px] flex-shrink-0" style={{ color }}>
+        💬
+      </span>
+      <p className="text-[12px] text-toss-gray-700 leading-relaxed">{text}</p>
     </div>
   );
 }

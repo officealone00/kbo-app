@@ -1,11 +1,10 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Trophy, User, Zap, Calendar } from 'lucide-react';
+import { Trophy, User, Zap } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: '순위', icon: Trophy },
   { path: '/batters', label: '타자', icon: User },
   { path: '/pitchers', label: '투수', icon: Zap },
-  { path: '/games', label: '경기', icon: Calendar },
 ];
 
 export default function BottomNav() {

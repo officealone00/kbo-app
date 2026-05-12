@@ -3,22 +3,14 @@ import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-rou
 import StandingsPage from '@/pages/StandingsPage';
 import BattersPage from '@/pages/BattersPage';
 import PitchersPage from '@/pages/PitchersPage';
-import GamesPage from '@/pages/GamesPage';
 import TeamReportPage from '@/pages/TeamReportPage';
 import BottomNav from '@/components/BottomNav';
 import FavoriteTeamModal from '@/components/FavoriteTeamModal';
-import InterstitialAd from '@/components/InterstitialAd';
 import {
   hasOnboarded,
   markOnboarded,
   setFavoriteTeam,
-  incrementInterstitialCount,
-  resetInterstitialCount,
 } from '@/utils/storage';
-
-// 몇 번 탭 이동마다 전면광고를 띄울지
-// 이 앱은 탭이 4개뿐이라 5회 주기가 적정 (8회는 너무 드물어서 수익성↓)
-const INTERSTITIAL_INTERVAL = 5;
 
 export default function App() {
   // MemoryRouter: 앱인토스 웹뷰의 뒤로가기 버튼과 브라우저 히스토리 충돌 방지
@@ -31,7 +23,6 @@ export default function App() {
 
 function AppShell() {
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showInterstitial, setShowInterstitial] = useState(false);
   const location = useLocation();
 
   // 첫 진입 시 온보딩 모달
@@ -47,7 +38,7 @@ function AppShell() {
     markOnboarded();
   };
 
-  // 리포트 페이지에서는 하단 탭바 숨김 (몰입감 UP + 광고 시청 방해 X)
+  // 리포트 페이지에서는 하단 탭바 숨김 (몰입감 UP)
   const hideBottomNav = location.pathname === '/report';
 
   return (
@@ -58,19 +49,10 @@ function AppShell() {
           <Route path="/" element={<StandingsPage />} />
           <Route path="/batters" element={<BattersPage />} />
           <Route path="/pitchers" element={<PitchersPage />} />
-          <Route path="/games" element={<GamesPage />} />
           <Route path="/report" element={<TeamReportPage />} />
         </Routes>
       </div>
       {!hideBottomNav && <BottomNav />}
-
-      {/* 전면광고 */}
-      {showInterstitial && (
-        <InterstitialAd
-          onClose={() => setShowInterstitial(false)}
-          onComplete={() => resetInterstitialCount()}
-        />
-      )}
 
       {/* 첫 진입 온보딩 */}
       {showOnboarding && (
@@ -81,11 +63,6 @@ function AppShell() {
           onSelect={handleOnboardingSelect}
         />
       )}
-
-      {/* 전역 탭 클릭 리스너 → 전면광고 트리거 */}
-      <GlobalClickTracker
-        onShouldShowAd={() => setShowInterstitial(true)}
-      />
     </>
   );
 }
@@ -113,27 +90,6 @@ function BackButtonHandler() {
 
     return () => window.removeEventListener('popstate', handleBack);
   }, [location.pathname, navigate]);
-
-  return null;
-}
-
-// ─── 탭 네비게이션 클릭을 카운트해서 N번에 1회 전면광고 표시 ───
-function GlobalClickTracker({ onShouldShowAd }: { onShouldShowAd: () => void }) {
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const navButton = target.closest('.bottom-nav-item');
-      if (!navButton) return;
-
-      const count = incrementInterstitialCount();
-      if (count > 0 && count % INTERSTITIAL_INTERVAL === 0) {
-        setTimeout(() => onShouldShowAd(), 300);
-      }
-    };
-
-    document.addEventListener('click', handler, true);
-    return () => document.removeEventListener('click', handler, true);
-  }, [onShouldShowAd]);
 
   return null;
 }
