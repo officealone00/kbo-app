@@ -1,7 +1,15 @@
 {
   "today": {
     "date": "20260512",
-    "games": []
+    "games": [
+      {
+        "away": "삼성",
+        "home": "LG",
+        "awayScore": null,
+        "homeScore": null,
+        "status": "예정"
+      }
+    ]
   },
   "yesterday": {
     "date": "20260511",
