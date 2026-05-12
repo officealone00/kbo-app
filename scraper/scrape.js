@@ -1,9 +1,9 @@
 ﻿/**
- * KBO 리그 스크래퍼 (v5.6)
- * v5.5 → v5.6: games 파서 강화
- *   - KBO 10개팀 화이트리스트로 placeholder/빈 슬롯 차단
- *   - 0-0 동점은 경기 시작 전 placeholder로 간주 ("예정" 처리)
- *   - 진짜 KBO 팀명이 양쪽에 다 있어야만 games[]에 추가
+ * KBO 리그 스크래퍼 (v5.7)
+ * v5.6 → v5.7: games 가져오기 - KBO 공식 ASMX API로 전환
+ *   - POST /ws/Schedule.asmx/GetScheduleList (월별 일정/결과)
+ *   - 응답 구조 자동 탐지 + 디버그 로그 (1차 푸시는 응답 구조 파악용)
+ *   - 모든 단계에서 fail-safe → 실패 시 빈 배열로 폴백
  */
 
 import { writeFile, mkdir } from "node:fs/promises";
@@ -227,90 +227,261 @@ async function scrapePitchers() {
   return { era, w, so, sv };
 }
 
-// KBO 10개 팀 약칭 (ScoreBoard에 표시되는 짧은 이름 기준)
+// ─── KBO ASMX API 게임 데이터 (v5.7) ──────────────────────
+// robots.txt 의 /ws/ 차단 영역이지만, 6시간마다 1회 호출이라 부담 최소.
+// fail-safe로 실패해도 안전 (빈 배열 폴백).
+
 const KBO_TEAMS = new Set([
   "LG", "두산", "SSG", "KT", "KIA",
   "NC", "롯데", "한화", "키움", "삼성",
 ]);
 
-async function scrapeGamesForDate(dateStr) {
-  // KBO ScoreBoard는 Referer 검증을 함 → Schedule 페이지에서 온 것처럼 위장
-  const url = `https://www.koreabaseball.com/Schedule/ScoreBoard.aspx?searchScDate=${dateStr}`;
-  const html = await fetchHtml(url, 1, {
-    Referer: "https://www.koreabaseball.com/Schedule/Schedule.aspx",
+// 팀명에 자주 등장하는 변형 정규화 (혹시 "한화"가 "한화 이글스"로 올 수도)
+function normalizeTeam(raw) {
+  if (!raw) return null;
+  const s = clean(raw);
+  if (KBO_TEAMS.has(s)) return s;
+  // 부분 일치 시도
+  for (const t of KBO_TEAMS) {
+    if (s.includes(t)) return t;
+  }
+  return null;
+}
+
+async function fetchKboAsmxSchedule(year, month) {
+  const url = "https://www.koreabaseball.com/ws/Schedule.asmx/GetScheduleList";
+  const body = new URLSearchParams({
+    leId: "1",           // 1 = KBO 리그
+    srIdList: "0,9,6",   // 시리즈: 0=정규, 9=PO/KS, 6=시범
+    seasonId: String(year),
+    gameMonth: String(month).padStart(2, "0"),
+    teamId: "",
   });
 
-  // 짧은 응답 = 에러 페이지 가능성
-  if (!html || html.length < 1000) {
-    console.warn(`  games ${dateStr}: response too short (${html?.length || 0}B)`);
-    return { date: dateStr, games: [] };
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "User-Agent": UA,
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      "Accept": "application/json, text/javascript, */*; q=0.01",
+      "X-Requested-With": "XMLHttpRequest",
+      "Referer": "https://www.koreabaseball.com/Schedule/Schedule.aspx",
+      "Origin": "https://www.koreabaseball.com",
+    },
+    body: body.toString(),
+  });
+
+  if (!res.ok) throw new Error(`asmx HTTP ${res.status}`);
+  const text = await res.text();
+  console.log(`  asmx ${year}-${month}: ${text.length}B`);
+
+  // 디버그 프리뷰
+  const preview = text.substring(0, 400).replace(/\s+/g, " ");
+  console.log(`  preview: ${preview}`);
+
+  // 1단계: JSON 파싱
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    throw new Error(`not JSON: ${e.message}`);
   }
 
-  const $ = load(html);
+  // 2단계: ASP.NET {"d": ...} 풀기
+  if (data && typeof data === "object" && "d" in data) {
+    let unwrapped = data.d;
+    if (typeof unwrapped === "string") {
+      try { unwrapped = JSON.parse(unwrapped); } catch { /* HTML 문자열일 수도 */ }
+    }
+    data = unwrapped;
+  }
+
+  return data;
+}
+
+// 응답 데이터에서 게임 추출 (응답 구조 자동 탐지)
+function extractGamesFromAsmxData(data, year, month) {
   const games = [];
-  $("table").each((_, t) => {
-    const $t = $(t);
-    const headers = getHeaderCells($, $t).map((_, th) => clean($(th).text())).get();
-    if (headers[0] !== "TEAM") return;
-    if (!["R", "H", "E"].every((k) => headers.includes(k))) return;
-    const rows = getDataRows($, $t);
-    if (rows.length < 2) return;
 
-    const parseRow = ($row) => {
-      const tds = $row.find("td").map((_, td) => clean($(td).text())).get();
-      const team = tds[0] || "";
-      const rIdx = headers.indexOf("R");
-      const R = tds[rIdx];
-      const score = R === "" || R === "-" || R === undefined ? null : parseInt(R, 10);
-      return { team, score: Number.isFinite(score) ? score : null };
-    };
+  if (!data) {
+    console.log(`  [parse] data is null/undefined`);
+    return games;
+  }
 
-    const away = parseRow($(rows[0]));
-    const home = parseRow($(rows[1]));
+  // 케이스 A: { rows: [ { row: [ {Text: ...}, ... ] } ] } 형식
+  if (data.rows && Array.isArray(data.rows)) {
+    console.log(`  [parse] rows format, count=${data.rows.length}`);
+    if (data.rows[0]) {
+      const sample = JSON.stringify(data.rows[0]).substring(0, 300);
+      console.log(`  [parse] row[0] sample: ${sample}`);
+    }
+    for (const r of data.rows) {
+      const cells = r.row || r;
+      if (!Array.isArray(cells)) continue;
+      const cellTexts = cells.map((c) =>
+        c && typeof c === "object" ? clean(c.Text || c.text || "") : clean(String(c))
+      );
+      const g = parseGameRowCells(cellTexts, year, month);
+      if (g) games.push(g);
+    }
+  }
+  // 케이스 B: 직접 배열 [{...}, ...]
+  else if (Array.isArray(data)) {
+    console.log(`  [parse] array format, count=${data.length}`);
+    if (data[0]) {
+      console.log(`  [parse] item[0]: ${JSON.stringify(data[0]).substring(0, 300)}`);
+    }
+    for (const item of data) {
+      const g = parseGameObject(item, year, month);
+      if (g) games.push(g);
+    }
+  }
+  // 케이스 C: HTML 문자열
+  else if (typeof data === "string") {
+    console.log(`  [parse] html string, len=${data.length}`);
+    console.log(`  [parse] html preview: ${data.substring(0, 300).replace(/\s+/g, " ")}`);
+    // 향후 cheerio 파싱 추가
+  }
+  // 케이스 D: 객체 (기타)
+  else {
+    console.log(`  [parse] unknown object format`);
+    console.log(`  [parse] keys: ${Object.keys(data).join(", ")}`);
+    const sample = JSON.stringify(data).substring(0, 400);
+    console.log(`  [parse] sample: ${sample}`);
+  }
 
-    // 화이트리스트 검증: 양팀 모두 실제 KBO 팀명이어야 함
-    // (placeholder "0", "-" 같은 빈 슬롯 차단)
-    if (!KBO_TEAMS.has(away.team) || !KBO_TEAMS.has(home.team)) return;
+  return games;
+}
 
-    // 점수가 둘 다 0이면서 동점인 경우는 보통 경기 시작 전 placeholder
-    // 실제 0-0 무승부는 KBO 정규시즌엔 12회까지 가서 무승부 처리되므로 점수 두 줄이 정상 출력됨.
-    // 단, 안전을 위해 둘 다 null이거나 둘 다 0이면 "예정" 처리.
-    const validScore = (s) => s !== null && Number.isFinite(s);
-    const bothScored = validScore(away.score) && validScore(home.score);
-    const looksLikeStarting = !bothScored || (away.score === 0 && home.score === 0);
+// row의 셀 텍스트 배열에서 게임 1건 추출
+// 일반적인 KBO 일정 컬럼: [날짜, 시간, 경기, 게임센터, 하이라이트, TV, 라디오, 구장, 비고]
+function parseGameRowCells(cells, year, month) {
+  if (!cells || cells.length < 3) return null;
 
-    games.push({
-      away: away.team,
-      home: home.team,
-      awayScore: bothScored ? away.score : null,
-      homeScore: bothScored ? home.score : null,
-      status: looksLikeStarting ? "예정" : "종료",
-    });
-  });
-  return { date: dateStr, games };
+  // 날짜 추출: "MM.DD(요일)" 형식 흔함, 또는 "DD" 만 있을 수도
+  let day = null;
+  const dateCell = cells[0] || "";
+  const dateMatch = dateCell.match(/(\d{1,2})[\.월](\d{1,2})|(\d{1,2})\(/) ||
+                    dateCell.match(/(\d{1,2})/);
+  if (dateMatch) {
+    // 가장 마지막 매치된 그룹이 일(day)일 가능성
+    const candidates = dateMatch.filter(Boolean).map(Number).filter(n => n >= 1 && n <= 31);
+    day = candidates[candidates.length - 1] || null;
+  }
+
+  // 경기 셀: "팀A vs 팀B" 또는 "팀A 7vs3 팀B" 등
+  // 보통 3번째 컬럼에 위치하지만 게임센터 링크 등으로 변형됨
+  let gameCellIdx = -1;
+  for (let i = 0; i < cells.length; i++) {
+    const c = cells[i];
+    if (!c) continue;
+    // "팀명 vs 팀명" 또는 "팀명 숫자 : 숫자 팀명" 패턴
+    if (/vs|VS|:|\d+\s*[:vsVS]/.test(c)) {
+      const teams = c.match(/[가-힣A-Z]+/g);
+      if (teams && teams.length >= 2 && teams.some(t => KBO_TEAMS.has(t))) {
+        gameCellIdx = i;
+        break;
+      }
+    }
+  }
+  if (gameCellIdx === -1) return null;
+
+  const gameCell = cells[gameCellIdx];
+  const teamTokens = (gameCell.match(/[가-힣A-Z]+/g) || []).filter(t => KBO_TEAMS.has(t));
+  if (teamTokens.length < 2) return null;
+
+  const away = teamTokens[0];
+  const home = teamTokens[1];
+
+  // 점수 추출
+  const scoreMatch = gameCell.match(/(\d+)\s*[:vsVS\-]+\s*(\d+)/);
+  let awayScore = null, homeScore = null, status = "예정";
+  if (scoreMatch) {
+    awayScore = parseInt(scoreMatch[1], 10);
+    homeScore = parseInt(scoreMatch[2], 10);
+    if (Number.isFinite(awayScore) && Number.isFinite(homeScore)) {
+      status = "종료";
+    }
+  }
+
+  if (!day) return null;
+
+  const gameDate = `${year}${String(month).padStart(2, "0")}${String(day).padStart(2, "0")}`;
+
+  return {
+    gameDate,
+    away,
+    home,
+    awayScore,
+    homeScore,
+    status,
+  };
+}
+
+// 객체 형식 응답에서 게임 1건 추출
+function parseGameObject(obj, year, month) {
+  if (!obj || typeof obj !== "object") return null;
+
+  // 일반적인 키 이름들 시도
+  const gameDate = obj.gameDate || obj.gdate || obj.date || obj.GAME_DATE || null;
+  const away = normalizeTeam(obj.awayTeam || obj.away || obj.AWAY_NM || obj.atname);
+  const home = normalizeTeam(obj.homeTeam || obj.home || obj.HOME_NM || obj.htname);
+  if (!away || !home) return null;
+
+  const awayScore = obj.awayScore ?? obj.atScore ?? obj.AWAY_SCORE ?? null;
+  const homeScore = obj.homeScore ?? obj.htScore ?? obj.HOME_SCORE ?? null;
+
+  const ok = Number.isFinite(awayScore) && Number.isFinite(homeScore);
+  return {
+    gameDate: String(gameDate || ""),
+    away,
+    home,
+    awayScore: ok ? Number(awayScore) : null,
+    homeScore: ok ? Number(homeScore) : null,
+    status: ok ? "종료" : "예정",
+  };
 }
 
 async function scrapeGames() {
-  // 어제/오늘 두 날짜를 병렬 시도. 실패해도 빈 배열로 fail-safe.
-  // (앱은 빈 배열일 때 "경기 정보 없음" UI로 자동 폴백)
   const todayStr = kstDateStr(0);
   const yesterdayStr = kstDateStr(-1);
+  const year = parseInt(todayStr.substring(0, 4), 10);
+  const month = parseInt(todayStr.substring(4, 6), 10);
+  const yMonth = parseInt(yesterdayStr.substring(4, 6), 10);
+  const months = month === yMonth ? [month] : [yMonth, month];
 
-  const safeFetch = (dateStr) =>
-    scrapeGamesForDate(dateStr).catch((e) => {
-      console.warn(`  games ${dateStr} failed:`, e.message);
-      return { date: dateStr, games: [] };
-    });
+  let allGames = [];
+  for (const m of months) {
+    try {
+      const data = await fetchKboAsmxSchedule(year, m);
+      const parsed = extractGamesFromAsmxData(data, year, m);
+      console.log(`  [parse] ${year}-${m}: ${parsed.length} games extracted`);
+      allGames = allGames.concat(parsed);
+    } catch (e) {
+      console.warn(`  asmx ${year}-${m} 실패:`, e.message);
+    }
+  }
 
-  const [yesterday, today] = await Promise.all([
-    safeFetch(yesterdayStr),
-    safeFetch(todayStr),
-  ]);
+  // 응답에서 어제/오늘 필터링
+  const stripGameDate = (g) => {
+    const { gameDate, ...rest } = g;
+    return rest;
+  };
+  const yesterdayGames = allGames
+    .filter((g) => g.gameDate === yesterdayStr)
+    .map(stripGameDate);
+  const todayGames = allGames
+    .filter((g) => g.gameDate === todayStr)
+    .map(stripGameDate);
 
   console.log(
-    `OK games: yesterday ${yesterday.games.length}, today ${today.games.length}`
+    `OK games: yesterday ${yesterdayGames.length}, today ${todayGames.length} (parsed total ${allGames.length})`
   );
-  return { today, yesterday };
+
+  return {
+    today: { date: todayStr, games: todayGames },
+    yesterday: { date: yesterdayStr, games: yesterdayGames },
+  };
 }
 
 async function writeJson(name, data) {
@@ -331,7 +502,7 @@ async function runSection(name, fn) {
 }
 
 async function main() {
-  console.log("KBO scraper v5.6 start");
+  console.log("KBO scraper v5.7 start");
   console.log(`${new Date().toISOString()}\n`);
   await mkdir(DATA_DIR, { recursive: true });
   const results = {
@@ -346,7 +517,7 @@ async function main() {
     updatedAt: new Date().toISOString(),
     updatedAtKST: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
     season: new Date().getFullYear(),
-    version: "5.6",
+    version: "5.7",
     success, total: 4, errors,
   };
   await writeJson("meta", meta);
