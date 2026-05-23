@@ -1,6 +1,6 @@
 {
   "today": {
-    "date": "20260523",
+    "date": "20260524",
     "games": [
       {
         "away": "키움",
@@ -16,7 +16,7 @@
         "awayScore": null,
         "homeScore": null,
         "status": "예정",
-        "time": "17:00"
+        "time": "14:00"
       },
       {
         "away": "SSG",
@@ -24,7 +24,7 @@
         "awayScore": null,
         "homeScore": null,
         "status": "예정",
-        "time": "17:00"
+        "time": "14:00"
       },
       {
         "away": "NC",
@@ -32,7 +32,7 @@
         "awayScore": null,
         "homeScore": null,
         "status": "예정",
-        "time": "17:00"
+        "time": "14:00"
       },
       {
         "away": "두산",
@@ -40,52 +40,52 @@
         "awayScore": null,
         "homeScore": null,
         "status": "예정",
-        "time": "17:00"
+        "time": "14:00"
       }
     ]
   },
   "yesterday": {
-    "date": "20260522",
+    "date": "20260523",
     "games": [
       {
         "away": "키움",
         "home": "LG",
-        "awayScore": 7,
-        "homeScore": 0,
+        "awayScore": 2,
+        "homeScore": 5,
         "status": "종료",
-        "time": "18:30"
+        "time": "14:00"
       },
       {
         "away": "삼성",
         "home": "롯데",
-        "awayScore": 7,
-        "homeScore": 5,
+        "awayScore": 5,
+        "homeScore": 7,
         "status": "종료",
-        "time": "18:30"
+        "time": "17:00"
       },
       {
         "away": "SSG",
         "home": "KIA",
-        "awayScore": 2,
+        "awayScore": 4,
         "homeScore": 5,
         "status": "종료",
-        "time": "18:30"
+        "time": "17:00"
       },
       {
         "away": "NC",
         "home": "KT",
-        "awayScore": 4,
-        "homeScore": 7,
+        "awayScore": 5,
+        "homeScore": 10,
         "status": "종료",
-        "time": "18:30"
+        "time": "17:00"
       },
       {
         "away": "두산",
         "home": "한화",
-        "awayScore": 3,
+        "awayScore": 2,
         "homeScore": 5,
         "status": "종료",
-        "time": "18:30"
+        "time": "17:00"
       }
     ]
   }
