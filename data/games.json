@@ -1,6 +1,6 @@
 {
   "today": {
-    "date": "20260526",
+    "date": "20260527",
     "games": [
       {
         "away": "KT",
@@ -45,7 +45,48 @@
     ]
   },
   "yesterday": {
-    "date": "20260525",
-    "games": []
+    "date": "20260526",
+    "games": [
+      {
+        "away": "KT",
+        "home": "두산",
+        "awayScore": 6,
+        "homeScore": 0,
+        "status": "종료",
+        "time": "18:30"
+      },
+      {
+        "away": "LG",
+        "home": "롯데",
+        "awayScore": 2,
+        "homeScore": 1,
+        "status": "종료",
+        "time": "18:30"
+      },
+      {
+        "away": "삼성",
+        "home": "SSG",
+        "awayScore": null,
+        "homeScore": null,
+        "status": "예정",
+        "time": "18:30"
+      },
+      {
+        "away": "한화",
+        "home": "NC",
+        "awayScore": null,
+        "homeScore": null,
+        "status": "예정",
+        "time": "18:30"
+      },
+      {
+        "away": "KIA",
+        "home": "키움",
+        "awayScore": 5,
+        "homeScore": 2,
+        "status": "종료",
+        "time": "18:30"
+      }
+    ]
   }
 }
