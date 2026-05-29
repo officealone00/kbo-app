@@ -58,15 +58,15 @@
   {
     "rank": 5,
     "team": "한화",
-    "games": 49,
-    "wins": 24,
+    "games": 50,
+    "wins": 25,
     "losses": 25,
     "draws": 0,
-    "winRate": 0.49,
-    "gamesBehind": 6.5,
+    "winRate": 0.5,
+    "gamesBehind": 6,
     "last10": "6승0무4패",
-    "streak": "1승",
-    "home": "9-0-16",
+    "streak": "2승",
+    "home": "10-0-16",
     "away": "15-0-9"
   },
   {
@@ -86,16 +86,16 @@
   {
     "rank": 7,
     "team": "SSG",
-    "games": 50,
+    "games": 51,
     "wins": 22,
-    "losses": 27,
+    "losses": 28,
     "draws": 1,
-    "winRate": 0.449,
-    "gamesBehind": 8.5,
-    "last10": "1승0무9패",
-    "streak": "9패",
+    "winRate": 0.44,
+    "gamesBehind": 9,
+    "last10": "0승0무10패",
+    "streak": "10패",
     "home": "10-1-13",
-    "away": "12-0-14"
+    "away": "12-0-15"
   },
   {
     "rank": 8,
