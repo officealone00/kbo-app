@@ -1,13 +1,9 @@
 {
-  "updatedAt": "2026-06-02T12:37:35.974Z",
-  "updatedAtKST": "2026. 6. 2. PM 9:37:35",
+  "updatedAt": "2026-06-02T18:35:22.281Z",
+  "updatedAtKST": "2026. 6. 3. AM 3:35:22",
   "season": 2026,
   "version": "5.9",
-  "success": 1,
+  "success": 4,
   "total": 4,
-  "errors": [
-    "standings: 3 retries failed: fetch failed",
-    "batters: 3 retries failed: fetch failed",
-    "pitchers: 3 retries failed: fetch failed"
-  ]
+  "errors": []
 }
