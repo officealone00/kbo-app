@@ -5,9 +5,9 @@
       {
         "away": "KT",
         "home": "SSG",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 7,
+        "homeScore": 3,
+        "status": "종료",
         "time": "14:00"
       },
       {
