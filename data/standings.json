@@ -15,20 +15,6 @@
   },
   {
     "rank": 2,
-    "team": "KT",
-    "games": 58,
-    "wins": 34,
-    "losses": 23,
-    "draws": 1,
-    "winRate": 0.596,
-    "gamesBehind": 1.5,
-    "last10": "6승0무4패",
-    "streak": "1승",
-    "home": "16-0-13",
-    "away": "18-1-10"
-  },
-  {
-    "rank": 3,
     "team": "삼성",
     "games": 57,
     "wins": 33,
@@ -40,6 +26,20 @@
     "streak": "1승",
     "home": "16-1-13",
     "away": "17-0-10"
+  },
+  {
+    "rank": 3,
+    "team": "KT",
+    "games": 59,
+    "wins": 34,
+    "losses": 24,
+    "draws": 1,
+    "winRate": 0.586,
+    "gamesBehind": 2,
+    "last10": "6승0무4패",
+    "streak": "1패",
+    "home": "16-0-13",
+    "away": "18-1-11"
   },
   {
     "rank": 4,
@@ -85,6 +85,20 @@
   },
   {
     "rank": 7,
+    "team": "SSG",
+    "games": 59,
+    "wins": 26,
+    "losses": 32,
+    "draws": 1,
+    "winRate": 0.448,
+    "gamesBehind": 10,
+    "last10": "4승0무6패",
+    "streak": "1승",
+    "home": "14-1-15",
+    "away": "12-0-17"
+  },
+  {
+    "rank": 8,
     "team": "NC",
     "games": 57,
     "wins": 25,
@@ -96,20 +110,6 @@
     "streak": "1승",
     "home": "13-0-15",
     "away": "12-1-16"
-  },
-  {
-    "rank": 8,
-    "team": "SSG",
-    "games": 58,
-    "wins": 25,
-    "losses": 32,
-    "draws": 1,
-    "winRate": 0.439,
-    "gamesBehind": 10.5,
-    "last10": "3승0무7패",
-    "streak": "1패",
-    "home": "13-1-15",
-    "away": "12-0-17"
   },
   {
     "rank": 9,
