@@ -3,27 +3,34 @@ import { api, type Game, type GamesData } from '@/utils/api';
 import { getFavoriteTeam } from '@/utils/storage';
 import { getTeam } from '@/data/teams';
 import BannerAd from '@/components/BannerAd';
+import RefreshButton from '@/components/RefreshButton';
 
 type Tab = 'today' | 'yesterday';
 
 export default function GamesPage() {
   const [data, setData] = useState<GamesData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('today');
   const favorite = getFavoriteTeam();
 
+  const load = async (force = false) => {
+    try {
+      if (force) setRefreshing(true);
+      setError(null);
+      const d = await api.games(force);
+      setData(d);
+    } catch (e: any) {
+      setError(e.message || '로딩 실패');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      try {
-        const d = await api.games();
-        setData(d);
-      } catch (e: any) {
-        setError(e.message || '로딩 실패');
-      } finally {
-        setLoading(false);
-      }
-    })();
+    load();
   }, []);
 
   const current = data?.[tab];
@@ -44,9 +51,14 @@ export default function GamesPage() {
   return (
     <div className="min-h-screen bg-toss-gray-50">
       {/* Header */}
-      <div className="px-5 pt-14 pb-3 bg-white">
-        <h1 className="toss-title text-[24px]">📅 경기 결과</h1>
-        <p className="toss-caption mt-1">오늘 · 어제 경기</p>
+      <div className="px-5 pt-14 pb-3 bg-white flex items-start justify-between">
+        <div>
+          <h1 className="toss-title text-[24px]">📅 경기 결과</h1>
+          <p className="toss-caption mt-1">오늘 · 어제 경기</p>
+        </div>
+        <div className="pt-1">
+          <RefreshButton refreshing={refreshing} onClick={() => load(true)} />
+        </div>
       </div>
 
       {/* Tabs */}

@@ -52,6 +52,19 @@ const int = (s) => {
   const v = parseInt(clean(s).replace(/[^\d-]/g, ""), 10);
   return Number.isFinite(v) ? v : 0;
 };
+// KBO 이닝 표기 파서: "39 1/3" → 39.33, "39 2/3" → 39.67, "39" → 39, "1/3" → 0.33
+// (기존 num()은 "39 1/3"을 3913으로 잘못 파싱했음)
+const innings = (s) => {
+  const t = clean(s);
+  const m = t.match(/^(\d+)?\s*(?:([12])\/3)?$/);
+  if (!m || (!m[1] && !m[2])) {
+    const v = parseFloat(t.replace(/[^\d.]/g, ""));
+    return Number.isFinite(v) ? v : 0;
+  }
+  const whole = m[1] ? parseInt(m[1], 10) : 0;
+  const frac = m[2] ? parseInt(m[2], 10) / 3 : 0;
+  return Math.round((whole + frac) * 100) / 100;
+};
 
 function kstDateStr(offsetDays = 0) {
   const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
@@ -205,7 +218,7 @@ async function fetchPitcherPage(sortKey) {
       losses,
       sv: saves,
       hld: holds,
-      ip: get(tds, "IP", num),
+      ip: get(tds, "IP", innings),
       h: get(tds, "H", int),
       hr: get(tds, "HR", int),
       bb: get(tds, "BB", int),
@@ -223,8 +236,29 @@ async function scrapePitchers() {
     fetchPitcherPage("KK_CN"),
     fetchPitcherPage("SV_CN"),
   ]);
-  console.log(`OK pitchers: era ${era.length}, w ${w.length}, so ${so.length}, sv ${sv.length}`);
-  return { era, w, so, sv };
+  // 홀드(HOLD) 순위: 전용 정렬 페이지에서 수집. 실패해도 투수 섹션 전체는 살림.
+  let hld = [];
+  try {
+    hld = await fetchPitcherPage("HOLD_CN");
+    if (hld.length === 0) throw new Error("hold page empty");
+  } catch (e) {
+    // 폴백: 이미 받은 데이터에서 hld>0 선수를 모아 홀드 내림차순 정렬
+    console.warn(`  holds 전용 페이지 실패(${e.message}) → 기존 데이터에서 hld 정렬로 폴백`);
+    const seen = new Map();
+    for (const p of [...era, ...w, ...so, ...sv]) {
+      const k = `${p.name}|${p.team}`;
+      if (!seen.has(k)) seen.set(k, p);
+    }
+    hld = [...seen.values()]
+      .filter((p) => (p.hld || 0) > 0)
+      .sort((a, b) => (b.hld || 0) - (a.hld || 0))
+      .slice(0, 30)
+      .map((p, i) => ({ ...p, rank: i + 1 }));
+  }
+  console.log(
+    `OK pitchers: era ${era.length}, w ${w.length}, so ${so.length}, sv ${sv.length}, hld ${hld.length}`
+  );
+  return { era, w, so, sv, hld };
 }
 
 // ─── KBO ASMX API 게임 데이터 (v5.7) ──────────────────────

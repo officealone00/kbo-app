@@ -17,11 +17,11 @@ export default function StandingsPage() {
   const [favorite, setFavorite] = useState<string | null>(getFavoriteTeam());
   const [showModal, setShowModal] = useState(false);
 
-  const load = async () => {
+  const load = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const [s, m] = await Promise.all([api.standings(), api.meta().catch(() => null)]);
+      const [s, m] = await Promise.all([api.standings(force), api.meta(force).catch(() => null)]);
       setStandings(s);
       setMeta(m);
     } catch (e: any) {
@@ -52,7 +52,7 @@ export default function StandingsPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={load}
+            onClick={() => load(true)}
             className="p-2 rounded-full hover:bg-toss-gray-100"
             aria-label="새로고침"
           >

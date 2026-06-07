@@ -34,6 +34,7 @@ export const FALLBACK_PITCHERS: PitchersData = {
   w: [],
   so: [],
   sv: [],
+  hld: [],
 };
 
 export const FALLBACK_GAMES: GamesData = {

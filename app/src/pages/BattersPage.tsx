@@ -4,6 +4,7 @@ import { getFavoriteTeam } from '@/utils/storage';
 import { TEAM_NAMES, getTeam } from '@/data/teams';
 import BannerAd from '@/components/BannerAd';
 import TeamBadge from '@/components/TeamBadge';
+import RefreshButton from '@/components/RefreshButton';
 
 type Category = 'avg' | 'hr' | 'rbi' | 'sb';
 
@@ -17,22 +18,28 @@ const CATEGORIES: { key: Category; label: string; unit: string }[] = [
 export default function BattersPage() {
   const [data, setData] = useState<BattersData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cat, setCat] = useState<Category>('avg');
   const [teamFilter, setTeamFilter] = useState<string | null>(null);
   const favorite = getFavoriteTeam();
 
+  const load = async (force = false) => {
+    try {
+      if (force) setRefreshing(true);
+      setError(null);
+      const d = await api.batters(force);
+      setData(d);
+    } catch (e: any) {
+      setError(e.message || '로딩 실패');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      try {
-        const d = await api.batters();
-        setData(d);
-      } catch (e: any) {
-        setError(e.message || '로딩 실패');
-      } finally {
-        setLoading(false);
-      }
-    })();
+    load();
   }, []);
 
   const rows = useMemo(() => {
@@ -58,9 +65,14 @@ export default function BattersPage() {
   return (
     <div className="min-h-screen bg-toss-gray-50">
       {/* Header */}
-      <div className="px-5 pt-14 pb-3 bg-white">
-        <h1 className="toss-title text-[24px]">🏏 타자 순위</h1>
-        <p className="toss-caption mt-1">Top 30 · 카테고리별 정렬</p>
+      <div className="px-5 pt-14 pb-3 bg-white flex items-start justify-between">
+        <div>
+          <h1 className="toss-title text-[24px]">🏏 타자 순위</h1>
+          <p className="toss-caption mt-1">Top 30 · 카테고리별 정렬</p>
+        </div>
+        <div className="pt-1">
+          <RefreshButton refreshing={refreshing} onClick={() => load(true)} />
+        </div>
       </div>
 
       {/* Category tabs */}

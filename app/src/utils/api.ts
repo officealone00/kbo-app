@@ -47,9 +47,9 @@ async function fetchWithTimeout(url: string, ms = 8000): Promise<Response> {
   }
 }
 
-async function fetchJsonWithRetry<T>(path: string, fallback: T): Promise<T> {
-  // 캐시 버스터: 10분 단위로 바뀌도록 (CDN은 보통 10분 캐시)
-  const buster = Math.floor(Date.now() / (10 * 60 * 1000));
+async function fetchJsonWithRetry<T>(path: string, fallback: T, force = false): Promise<T> {
+  // 캐시 버스터: 평소엔 10분 단위(CDN 캐시 절약), 사용자가 새로고침하면 매번 고유값으로 강제 최신
+  const buster = force ? Date.now() : Math.floor(Date.now() / (10 * 60 * 1000));
   const primary = `${cdnUrl(path)}?v=${buster}`;
   const backup = `${cdnUrlBackup(path)}?v=${buster}`;
 
@@ -142,6 +142,7 @@ export interface PitchersData {
   w: Pitcher[];
   so: Pitcher[];
   sv: Pitcher[];
+  hld: Pitcher[];
 }
 
 export interface Game {
@@ -169,14 +170,14 @@ export interface Meta {
 
 // ─── API 함수들 (모두 자동 폴백 내장) ──────────────────────────────
 export const api = {
-  standings: () =>
-    fetchJsonWithRetry<TeamStanding[]>('data/standings.json', FALLBACK_STANDINGS),
-  batters: () =>
-    fetchJsonWithRetry<BattersData>('data/batters.json', FALLBACK_BATTERS),
-  pitchers: () =>
-    fetchJsonWithRetry<PitchersData>('data/pitchers.json', FALLBACK_PITCHERS),
-  games: () =>
-    fetchJsonWithRetry<GamesData>('data/games.json', FALLBACK_GAMES),
-  meta: () =>
-    fetchJsonWithRetry<Meta>('data/meta.json', FALLBACK_META),
+  standings: (force = false) =>
+    fetchJsonWithRetry<TeamStanding[]>('data/standings.json', FALLBACK_STANDINGS, force),
+  batters: (force = false) =>
+    fetchJsonWithRetry<BattersData>('data/batters.json', FALLBACK_BATTERS, force),
+  pitchers: (force = false) =>
+    fetchJsonWithRetry<PitchersData>('data/pitchers.json', FALLBACK_PITCHERS, force),
+  games: (force = false) =>
+    fetchJsonWithRetry<GamesData>('data/games.json', FALLBACK_GAMES, force),
+  meta: (force = false) =>
+    fetchJsonWithRetry<Meta>('data/meta.json', FALLBACK_META, force),
 };
