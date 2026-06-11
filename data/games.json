@@ -29,9 +29,9 @@
       {
         "away": "KIA",
         "home": "한화",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 1,
+        "homeScore": 5,
+        "status": "종료",
         "time": "18:30"
       },
       {
