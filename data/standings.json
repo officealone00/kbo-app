@@ -16,15 +16,15 @@
   {
     "rank": 2,
     "team": "KT",
-    "games": 63,
-    "wins": 37,
+    "games": 64,
+    "wins": 38,
     "losses": 25,
     "draws": 1,
-    "winRate": 0.597,
-    "gamesBehind": 2,
-    "last10": "5승0무5패",
-    "streak": "1승",
-    "home": "19-0-14",
+    "winRate": 0.603,
+    "gamesBehind": 1.5,
+    "last10": "6승0무4패",
+    "streak": "2승",
+    "home": "20-0-14",
     "away": "18-1-11"
   },
   {
@@ -86,16 +86,16 @@
   {
     "rank": 7,
     "team": "NC",
-    "games": 62,
+    "games": 63,
     "wins": 28,
-    "losses": 33,
+    "losses": 34,
     "draws": 1,
-    "winRate": 0.459,
-    "gamesBehind": 10.5,
+    "winRate": 0.452,
+    "gamesBehind": 11,
     "last10": "6승0무4패",
-    "streak": "1패",
+    "streak": "2패",
     "home": "14-0-15",
-    "away": "14-1-18"
+    "away": "14-1-19"
   },
   {
     "rank": 8,
