@@ -5,17 +5,17 @@
       {
         "away": "한화",
         "home": "키움",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 2,
+        "homeScore": 3,
+        "status": "종료",
         "time": "14:00"
       },
       {
         "away": "롯데",
         "home": "LG",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 1,
+        "homeScore": 6,
+        "status": "종료",
         "time": "17:00"
       },
       {
@@ -29,9 +29,9 @@
       {
         "away": "두산",
         "home": "KIA",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 8,
+        "homeScore": 1,
+        "status": "종료",
         "time": "17:00"
       },
       {
