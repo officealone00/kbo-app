@@ -30,15 +30,15 @@
   {
     "rank": 3,
     "team": "삼성",
-    "games": 63,
-    "wins": 35,
+    "games": 64,
+    "wins": 36,
     "losses": 27,
     "draws": 1,
-    "winRate": 0.565,
-    "gamesBehind": 4.5,
-    "last10": "3승0무7패",
-    "streak": "1승",
-    "home": "17-1-14",
+    "winRate": 0.571,
+    "gamesBehind": 4,
+    "last10": "4승0무6패",
+    "streak": "2승",
+    "home": "18-1-14",
     "away": "18-0-13"
   },
   {
@@ -100,16 +100,16 @@
   {
     "rank": 8,
     "team": "SSG",
-    "games": 64,
+    "games": 65,
     "wins": 27,
-    "losses": 36,
+    "losses": 37,
     "draws": 1,
-    "winRate": 0.429,
-    "gamesBehind": 13,
-    "last10": "5승0무5패",
-    "streak": "1패",
+    "winRate": 0.422,
+    "gamesBehind": 13.5,
+    "last10": "4승0무6패",
+    "streak": "2패",
     "home": "14-1-15",
-    "away": "13-0-21"
+    "away": "13-0-22"
   },
   {
     "rank": 9,
