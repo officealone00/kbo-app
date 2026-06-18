@@ -5,9 +5,9 @@
       {
         "away": "KT",
         "home": "두산",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 1,
+        "homeScore": 2,
+        "status": "종료",
         "time": "18:30"
       },
       {
