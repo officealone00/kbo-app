@@ -86,15 +86,15 @@
   {
     "rank": 7,
     "team": "NC",
-    "games": 73,
+    "games": 74,
     "wins": 34,
-    "losses": 38,
+    "losses": 39,
     "draws": 1,
-    "winRate": 0.472,
-    "gamesBehind": 11.5,
-    "last10": "6승0무4패",
-    "streak": "2승",
-    "home": "19-0-17",
+    "winRate": 0.466,
+    "gamesBehind": 12,
+    "last10": "5승0무5패",
+    "streak": "1패",
+    "home": "19-0-18",
     "away": "15-1-21"
   },
   {
@@ -128,15 +128,15 @@
   {
     "rank": 10,
     "team": "키움",
-    "games": 77,
-    "wins": 26,
+    "games": 78,
+    "wins": 27,
     "losses": 50,
     "draws": 1,
-    "winRate": 0.342,
-    "gamesBehind": 21.5,
-    "last10": "0승0무10패",
-    "streak": "10패",
+    "winRate": 0.351,
+    "gamesBehind": 21,
+    "last10": "1승0무9패",
+    "streak": "1승",
     "home": "17-1-24",
-    "away": "9-0-26"
+    "away": "10-0-26"
   }
 ]

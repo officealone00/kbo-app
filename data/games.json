@@ -37,9 +37,9 @@
       {
         "away": "키움",
         "home": "NC",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 3,
+        "homeScore": 1,
+        "status": "종료",
         "time": "17:00"
       }
     ]
