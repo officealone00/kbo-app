@@ -29,17 +29,17 @@
       {
         "away": "한화",
         "home": "SSG",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 6,
+        "homeScore": 3,
+        "status": "종료",
         "time": "17:00"
       },
       {
         "away": "키움",
         "home": "NC",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 2,
+        "homeScore": 9,
+        "status": "종료",
         "time": "17:00"
       }
     ]
