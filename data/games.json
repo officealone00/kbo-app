@@ -1,7 +1,15 @@
 {
   "today": {
-    "date": "20260821",
+    "date": "20260822",
     "games": [
+      {
+        "away": "KIA",
+        "home": "키움",
+        "awayScore": null,
+        "homeScore": null,
+        "status": "예정",
+        "time": "18:00"
+      },
       {
         "away": "롯데",
         "home": "두산",
@@ -33,57 +41,49 @@
         "homeScore": null,
         "status": "예정",
         "time": "19:00"
-      },
-      {
-        "away": "KIA",
-        "home": "키움",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
-        "time": "19:00"
       }
     ]
   },
   "yesterday": {
-    "date": "20260820",
+    "date": "20260821",
     "games": [
       {
+        "away": "롯데",
+        "home": "두산",
+        "awayScore": 11,
+        "homeScore": 4,
+        "status": "종료",
+        "time": "19:00"
+      },
+      {
         "away": "KT",
-        "home": "LG",
-        "awayScore": 16,
-        "homeScore": 4,
-        "status": "종료",
+        "home": "SSG",
+        "awayScore": null,
+        "homeScore": null,
+        "status": "예정",
         "time": "19:00"
       },
       {
-        "away": "SSG",
-        "home": "삼성",
-        "awayScore": 6,
-        "homeScore": 4,
-        "status": "종료",
-        "time": "19:00"
-      },
-      {
-        "away": "키움",
-        "home": "롯데",
-        "awayScore": 1,
-        "homeScore": 7,
-        "status": "종료",
-        "time": "19:00"
-      },
-      {
-        "away": "두산",
+        "away": "삼성",
         "home": "NC",
-        "awayScore": 4,
-        "homeScore": 5,
+        "awayScore": 2,
+        "homeScore": 3,
+        "status": "종료",
+        "time": "19:00"
+      },
+      {
+        "away": "LG",
+        "home": "한화",
+        "awayScore": 11,
+        "homeScore": 15,
         "status": "종료",
         "time": "19:00"
       },
       {
         "away": "KIA",
-        "home": "한화",
-        "awayScore": 10,
-        "homeScore": 6,
+        "home": "키움",
+        "awayScore": 11,
+        "homeScore": 1,
         "status": "종료",
         "time": "19:00"
       }
