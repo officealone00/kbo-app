@@ -1,5 +1,50 @@
 {
   "today": {
+    "date": "20260829",
+    "games": [
+      {
+        "away": "키움",
+        "home": "두산",
+        "awayScore": null,
+        "homeScore": null,
+        "status": "예정",
+        "time": "18:00"
+      },
+      {
+        "away": "KT",
+        "home": "삼성",
+        "awayScore": null,
+        "homeScore": null,
+        "status": "예정",
+        "time": "18:00"
+      },
+      {
+        "away": "LG",
+        "home": "롯데",
+        "awayScore": null,
+        "homeScore": null,
+        "status": "예정",
+        "time": "18:00"
+      },
+      {
+        "away": "SSG",
+        "home": "KIA",
+        "awayScore": null,
+        "homeScore": null,
+        "status": "예정",
+        "time": "18:00"
+      },
+      {
+        "away": "NC",
+        "home": "한화",
+        "awayScore": null,
+        "homeScore": null,
+        "status": "예정",
+        "time": "18:00"
+      }
+    ]
+  },
+  "yesterday": {
     "date": "20260828",
     "games": [
       {
@@ -40,51 +85,6 @@
         "awayScore": null,
         "homeScore": null,
         "status": "예정",
-        "time": "18:30"
-      }
-    ]
-  },
-  "yesterday": {
-    "date": "20260827",
-    "games": [
-      {
-        "away": "NC",
-        "home": "LG",
-        "awayScore": 13,
-        "homeScore": 3,
-        "status": "종료",
-        "time": "18:30"
-      },
-      {
-        "away": "한화",
-        "home": "SSG",
-        "awayScore": 6,
-        "homeScore": 13,
-        "status": "종료",
-        "time": "18:30"
-      },
-      {
-        "away": "롯데",
-        "home": "KIA",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
-        "time": "18:30"
-      },
-      {
-        "away": "두산",
-        "home": "KT",
-        "awayScore": 4,
-        "homeScore": 5,
-        "status": "종료",
-        "time": "18:30"
-      },
-      {
-        "away": "삼성",
-        "home": "키움",
-        "awayScore": 15,
-        "homeScore": 2,
-        "status": "종료",
         "time": "18:30"
       }
     ]
