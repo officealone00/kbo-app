@@ -5,9 +5,9 @@
       {
         "away": "키움",
         "home": "두산",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 1,
+        "homeScore": 15,
+        "status": "종료",
         "time": "18:00"
       },
       {
@@ -37,9 +37,9 @@
       {
         "away": "NC",
         "home": "한화",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 10,
+        "homeScore": 7,
+        "status": "종료",
         "time": "18:00"
       }
     ]
