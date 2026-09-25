@@ -21,9 +21,9 @@
       {
         "away": "한화",
         "home": "NC",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 7,
+        "homeScore": 8,
+        "status": "종료",
         "time": "17:00"
       }
     ]
