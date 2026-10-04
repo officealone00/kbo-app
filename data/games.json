@@ -1,6 +1,6 @@
 {
   "today": {
-    "date": "20261004",
+    "date": "20261005",
     "games": [
       {
         "away": "KIA",
@@ -13,6 +13,14 @@
       {
         "away": "두산",
         "home": "삼성",
+        "awayScore": null,
+        "homeScore": null,
+        "status": "예정",
+        "time": "14:00"
+      },
+      {
+        "away": "롯데",
+        "home": "KT",
         "awayScore": null,
         "homeScore": null,
         "status": "예정",
@@ -32,6 +40,43 @@
         "awayScore": null,
         "homeScore": null,
         "status": "예정",
+        "time": "14:00"
+      }
+    ]
+  },
+  "yesterday": {
+    "date": "20261004",
+    "games": [
+      {
+        "away": "KIA",
+        "home": "LG",
+        "awayScore": 6,
+        "homeScore": 5,
+        "status": "종료",
+        "time": "14:00"
+      },
+      {
+        "away": "두산",
+        "home": "삼성",
+        "awayScore": 12,
+        "homeScore": 0,
+        "status": "종료",
+        "time": "14:00"
+      },
+      {
+        "away": "SSG",
+        "home": "NC",
+        "awayScore": 6,
+        "homeScore": 2,
+        "status": "종료",
+        "time": "14:00"
+      },
+      {
+        "away": "키움",
+        "home": "한화",
+        "awayScore": 9,
+        "homeScore": 3,
+        "status": "종료",
         "time": "14:00"
       },
       {
@@ -41,51 +86,6 @@
         "homeScore": null,
         "status": "예정",
         "time": "17:00"
-      }
-    ]
-  },
-  "yesterday": {
-    "date": "20261003",
-    "games": [
-      {
-        "away": "KIA",
-        "home": "LG",
-        "awayScore": 5,
-        "homeScore": 4,
-        "status": "종료",
-        "time": "14:00"
-      },
-      {
-        "away": "두산",
-        "home": "삼성",
-        "awayScore": 4,
-        "homeScore": 6,
-        "status": "종료",
-        "time": "14:00"
-      },
-      {
-        "away": "롯데",
-        "home": "KT",
-        "awayScore": 0,
-        "homeScore": 5,
-        "status": "종료",
-        "time": "14:00"
-      },
-      {
-        "away": "SSG",
-        "home": "NC",
-        "awayScore": 1,
-        "homeScore": 13,
-        "status": "종료",
-        "time": "14:00"
-      },
-      {
-        "away": "키움",
-        "home": "한화",
-        "awayScore": 7,
-        "homeScore": 2,
-        "status": "종료",
-        "time": "14:00"
       }
     ]
   }
