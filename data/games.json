@@ -5,17 +5,17 @@
       {
         "away": "KT",
         "home": "삼성",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 12,
+        "homeScore": 3,
+        "status": "종료",
         "time": "14:00"
       },
       {
         "away": "롯데",
         "home": "KIA",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 4,
+        "homeScore": 1,
+        "status": "종료",
         "time": "14:00"
       }
     ]
