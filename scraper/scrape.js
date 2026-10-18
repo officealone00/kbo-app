@@ -120,8 +120,39 @@ async function scrapeStandings() {
   });
   if (teams.length === 0) throw new Error("standings empty");
   if (teams.length > 10) teams.length = 10;
+
+  // 팀간 승패표 (상대 전적) — 같은 페이지 두 번째 표 (v6.0)
+  try {
+    const $h = $("table").filter((_, t) => /팀명/.test($(t).find("tr").first().text()) && /\(승-패-무\)/.test($(t).text())).first();
+    const head = $h.find("tr").first().find("th,td").map((_, c) => clean($(c).text()).replace(/\s*\(승-패-무\)/, "")).get();
+    const h2h = {};
+    $h.find("tr").slice(1).each((_, tr) => {
+      const cells = $(tr).find("th,td").map((_, c) => clean($(c).text())).get();
+      const team = cells[0];
+      if (!KBO_TEAMS.has(team)) return;
+      h2h[team] = {};
+      head.forEach((opp, i) => {
+        if (i === 0 || !KBO_TEAMS.has(opp) || opp === team) return;
+        const m = (cells[i] || "").match(/(\d+)-(\d+)-(\d+)/);
+        if (m) h2h[team][opp] = { w: +m[1], l: +m[2], d: +m[3] };
+      });
+    });
+    if (Object.keys(h2h).length >= 8) {
+      await writeJson("h2h", { season: new Date().getFullYear(), updatedAt: new Date().toISOString(), h2h });
+      console.log(`OK h2h: ${Object.keys(h2h).length} teams`);
+    }
+  } catch (e) {
+    console.warn("h2h parse failed", e.message);
+  }
   console.log(`OK standings: ${teams.length} teams`);
   return teams;
+}
+
+// 기록 페이지가 지금 어떤 시리즈를 보여주는지 (0=정규시즌, 3=준PO, 4=WC, 5=PO, 7=KS)
+// 가을야구 기간엔 KBO가 포스트시즌을 기본으로 보여줘서, 정규시즌 파일을 덮어쓰지 않게 구분해요 (v6.0)
+function detectSeries($) {
+  const sel = $("select[name$='ddlSeries$ddlSeries'] option[selected]").attr("value");
+  return sel ?? "0";
 }
 
 async function fetchBatterPage(sortKey) {
@@ -163,7 +194,9 @@ async function fetchBatterPage(sortKey) {
       so: get(tds, "SO", int),
     });
   });
-  return players.slice(0, 30).map((p, i) => ({ rank: i + 1, ...p }));
+  const list = players.slice(0, 30).map((p, i) => ({ rank: i + 1, ...p }));
+  list.series = detectSeries($);
+  return list;
 }
 
 async function scrapeBatters() {
@@ -173,8 +206,8 @@ async function scrapeBatters() {
     fetchBatterPage("RBI_CN"),
     fetchBatterPage("SB_CN"),
   ]);
-  console.log(`OK batters: avg ${avg.length}, hr ${hr.length}, rbi ${rbi.length}, sb ${sb.length}`);
-  return { avg, hr, rbi, sb };
+  console.log(`OK batters: avg ${avg.length}, hr ${hr.length}, rbi ${rbi.length}, sb ${sb.length} (series ${avg.series})`);
+  return { __series: avg.series, avg, hr, rbi, sb };
 }
 
 async function fetchPitcherPage(sortKey) {
@@ -226,7 +259,9 @@ async function fetchPitcherPage(sortKey) {
       er: get(tds, "ER", int),
     });
   });
-  return players.slice(0, 30).map((p, i) => ({ rank: i + 1, ...p }));
+  const list = players.slice(0, 30).map((p, i) => ({ rank: i + 1, ...p }));
+  list.series = detectSeries($);
+  return list;
 }
 
 async function scrapePitchers() {
@@ -258,7 +293,7 @@ async function scrapePitchers() {
   console.log(
     `OK pitchers: era ${era.length}, w ${w.length}, so ${so.length}, sv ${sv.length}, hld ${hld.length}`
   );
-  return { era, w, so, sv, hld };
+  return { __series: era.series, era, w, so, sv, hld };
 }
 
 // ─── KBO ASMX API 게임 데이터 (v5.7) ──────────────────────
@@ -286,7 +321,7 @@ async function fetchKboAsmxSchedule(year, month) {
   const url = "https://www.koreabaseball.com/ws/Schedule.asmx/GetScheduleList";
   const body = new URLSearchParams({
     leId: "1",           // 1 = KBO 리그
-    srIdList: "0,9,6",   // 시리즈: 0=정규, 9=PO/KS, 6=시범
+    srIdList: "0,4,3,5,7",   // 시리즈: 0=정규, 4=WC, 3=준PO, 5=PO, 7=KS (v6.0 가을야구 포함)
     seasonId: String(year),
     gameMonth: String(month).padStart(2, "0"),
     teamId: "",
@@ -501,6 +536,75 @@ async function scrapeGames() {
   };
 }
 
+// ─── 포스트시즌 (v6.0) ──────────────────────
+// KBO 시리즈 번호: 4=와일드카드 결정전, 3=준플레이오프, 5=플레이오프, 7=한국시리즈
+const POST_SERIES = [
+  { sr: "4", id: "wc", name: "와일드카드 결정전", winsNeeded: null },
+  { sr: "3", id: "semi", name: "준플레이오프", winsNeeded: 3 },
+  { sr: "5", id: "po", name: "플레이오프", winsNeeded: 3 },
+  { sr: "7", id: "ks", name: "한국시리즈", winsNeeded: 4 },
+];
+
+async function fetchSeriesGames(sr, year, month) {
+  const url = "https://www.koreabaseball.com/ws/Schedule.asmx/GetScheduleList";
+  const body = new URLSearchParams({ leId: "1", srIdList: sr, seasonId: String(year), gameMonth: String(month).padStart(2, "0"), teamId: "" });
+  for (let i = 0; i < RETRY; i++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "User-Agent": UA,
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          Accept: "application/json, text/javascript, */*; q=0.01",
+          "X-Requested-With": "XMLHttpRequest",
+          Referer: "https://www.koreabaseball.com/Schedule/Schedule.aspx",
+          Origin: "https://www.koreabaseball.com",
+        },
+        body: body.toString(),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      let data = JSON.parse(await res.text());
+      if (data && typeof data === "object" && "d" in data) data = typeof data.d === "string" ? JSON.parse(data.d) : data.d;
+      return extractGamesFromAsmxData(data, year, month);
+    } catch (e) {
+      if (i === RETRY - 1) throw e;
+      await sleep(RETRY_DELAY_MS);
+    }
+  }
+  return [];
+}
+
+async function scrapePostseason() {
+  const year = parseInt(kstDateStr(0).substring(0, 4), 10);
+  const series = [];
+  for (const s of POST_SERIES) {
+    let games = [];
+    for (const month of [9, 10, 11]) {
+      try {
+        games = games.concat(await fetchSeriesGames(s.sr, year, month));
+      } catch (e) {
+        console.warn(`  postseason ${s.id} ${month}월 실패: ${e.message}`);
+      }
+      await sleep(400);
+    }
+    games.sort((a, b) => (a.gameDate + (a.time || "")).localeCompare(b.gameDate + (b.time || "")));
+    if (games.length === 0) continue;
+    const teams = [...new Set(games.flatMap((g) => [g.away, g.home]))].slice(0, 2);
+    const wins = Object.fromEntries(teams.map((t) => [t, 0]));
+    for (const g of games) {
+      if (g.status !== "종료" || g.homeScore == null || g.awayScore == null || g.homeScore === g.awayScore) continue;
+      const w = g.homeScore > g.awayScore ? g.home : g.away;
+      if (w in wins) wins[w]++;
+    }
+    let winner = null;
+    if (s.winsNeeded) winner = teams.find((t) => wins[t] >= s.winsNeeded) || null;
+    else if (games.every((g) => g.status !== "예정")) winner = teams.sort((a, b) => wins[b] - wins[a])[0] || null;
+    series.push({ ...s, teams, wins, winner, games });
+  }
+  console.log(`OK postseason: ${series.map((x) => `${x.id}(${x.games.length})`).join(", ") || "없음"}`);
+  return { season: year, updatedAt: new Date().toISOString(), series };
+}
+
 async function writeJson(name, data) {
   const path = new URL(`${name}.json`, DATA_DIR);
   await writeFile(path, JSON.stringify(data, null, 2), "utf8");
@@ -519,14 +623,27 @@ async function runSection(name, fn) {
 }
 
 async function main() {
-  console.log("KBO scraper v5.9 start");
+  console.log("KBO scraper v6.0 start");
   console.log(`${new Date().toISOString()}\n`);
   await mkdir(DATA_DIR, { recursive: true });
+  // 기록: 정규시즌이면 batters/pitchers, 가을야구 기록이면 postseason_* 로 따로 저장 (정규시즌 최종 기록 보존)
+  const runStats = async (name, fn) => {
+    try {
+      const { __series, ...data } = await fn();
+      const target = __series === "0" ? name : `postseason_${name}`;
+      await writeJson(target, { ...(target !== name ? { series: __series } : {}), ...data });
+      return { ok: true };
+    } catch (e) {
+      console.error(`FAIL ${name}:`, e.message);
+      return { ok: false, error: e.message };
+    }
+  };
   const results = {
     standings: await runSection("standings", scrapeStandings),
-    batters: await runSection("batters", scrapeBatters),
-    pitchers: await runSection("pitchers", scrapePitchers),
+    batters: await runStats("batters", scrapeBatters),
+    pitchers: await runStats("pitchers", scrapePitchers),
     games: await runSection("games", scrapeGames),
+    postseason: await runSection("postseason", scrapePostseason),
   };
   const success = Object.values(results).filter((r) => r.ok).length;
   const errors = Object.entries(results).filter(([, r]) => !r.ok).map(([k, r]) => `${k}: ${r.error}`);
@@ -534,11 +651,11 @@ async function main() {
     updatedAt: new Date().toISOString(),
     updatedAtKST: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
     season: new Date().getFullYear(),
-    version: "5.9",
-    success, total: 4, errors,
+    version: "6.0",
+    success, total: 5, errors,
   };
   await writeJson("meta", meta);
-  console.log(`\nDONE ${success}/4 success`);
+  console.log(`\nDONE ${success}/5 success`);
   if (success === 0) {
     console.error("all failed - exit 1");
     process.exit(1);

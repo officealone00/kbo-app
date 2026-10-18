@@ -8,6 +8,7 @@ import { getTeam } from '@/data/teams';
 import BannerAd from '@/components/BannerAd';
 import FavoriteTeamModal from '@/components/FavoriteTeamModal';
 import TeamLogo from '@/components/TeamLogo';
+import { PostseasonStrip } from '@/components/Postseason';
 
 export default function StandingsPage() {
   const navigate = useNavigate();
@@ -71,6 +72,11 @@ export default function StandingsPage() {
             )}
           </button>
         </div>
+      </div>
+
+      {/* 🍂 가을야구 소식 (2026-10-18) — 누르면 경기 탭의 대진표로 */}
+      <div className="px-5 mt-3">
+        <PostseasonStrip onOpen={() => navigate('/games')} />
       </div>
 
       {/* Favorite team card + 상세 리포트 버튼 */}

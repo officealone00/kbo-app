@@ -1,10 +1,28 @@
 {
   "today": {
     "date": "20261018",
-    "games": []
+    "games": [
+      {
+        "away": "LG",
+        "home": "KIA",
+        "awayScore": 3,
+        "homeScore": 6,
+        "status": "종료",
+        "time": "14:00"
+      }
+    ]
   },
   "yesterday": {
     "date": "20261017",
-    "games": []
+    "games": [
+      {
+        "away": "LG",
+        "home": "KIA",
+        "awayScore": 1,
+        "homeScore": 5,
+        "status": "종료",
+        "time": "14:00"
+      }
+    ]
   }
 }

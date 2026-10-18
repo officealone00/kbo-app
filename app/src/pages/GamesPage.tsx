@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api, type Game, type GamesData } from '@/utils/api';
+import { api, type Game, type GamesData, type PostseasonData } from '@/utils/api';
+import { PostseasonBracket } from '@/components/Postseason';
 import { getFavoriteTeam } from '@/utils/storage';
 import { getTeam } from '@/data/teams';
 import BannerAd from '@/components/BannerAd';
@@ -13,6 +14,7 @@ export default function GamesPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('today');
+  const [post, setPost] = useState<PostseasonData | null>(null);
   const favorite = getFavoriteTeam();
 
   const load = async (force = false) => {
@@ -31,7 +33,17 @@ export default function GamesPage() {
 
   useEffect(() => {
     load();
+    void api.postseason().then(setPost);
   }, []);
+
+  // 가을야구 경기면 '준플레이오프 2차전'처럼 이름을 붙여요
+  const seriesLabel = (g: Game, date?: string) => {
+    for (const s of post?.series ?? []) {
+      const i = s.games.findIndex((x) => x.gameDate === date && x.home === g.home && x.away === g.away);
+      if (i >= 0) return `${s.name}${s.id === 'wc' ? '' : ` ${i + 1}차전`}`;
+    }
+    return null;
+  };
 
   const current = data?.[tab];
   const games = current?.games || [];
@@ -54,7 +66,7 @@ export default function GamesPage() {
       <div className="px-5 pt-5 pb-3 bg-white flex items-start justify-between">
         <div>
           <h1 className="toss-title text-[24px]">📅 경기 결과</h1>
-          <p className="toss-caption mt-1">오늘 · 어제 경기</p>
+          <p className="toss-caption mt-1">가을야구 대진표 · 오늘 · 어제 경기</p>
         </div>
         <div className="pt-1">
           <RefreshButton refreshing={refreshing} onClick={() => load(true)} />
@@ -88,6 +100,8 @@ export default function GamesPage() {
 
       {/* Content */}
       <div className="px-5 py-4">
+        <PostseasonBracket />
+
         {error && (
           <div className="p-4 bg-toss-red/10 rounded-2xl mb-3">
             <p className="text-sm text-toss-red">{error}</p>
@@ -115,7 +129,7 @@ export default function GamesPage() {
         {!loading && sorted.length > 0 && (
           <div className="space-y-2">
             {sorted.map((g, i) => (
-              <GameCard key={i} game={g} favorite={favorite} />
+              <GameCard key={i} game={g} favorite={favorite} label={seriesLabel(g, current?.date)} />
             ))}
           </div>
         )}
@@ -131,7 +145,7 @@ export default function GamesPage() {
   );
 }
 
-function GameCard({ game, favorite }: { game: Game; favorite: string | null }) {
+function GameCard({ game, favorite, label }: { game: Game; favorite: string | null; label?: string | null }) {
   const home = getTeam(game.home);
   const away = getTeam(game.away);
   const isDone = game.status === '종료' && game.homeScore != null;
@@ -147,8 +161,12 @@ function GameCard({ game, favorite }: { game: Game; favorite: string | null }) {
         border: isFavGame ? '2px solid #3182F6' : '2px solid transparent',
       }}
     >
-      {isFavGame && (
-        <p className="text-[11px] font-bold text-toss-blue mb-2">❤️ 내 팀 경기</p>
+      {(isFavGame || label) && (
+        <p className="text-[11px] font-bold mb-2">
+          {label && <span className="text-[#F04452]">🍂 {label}</span>}
+          {label && isFavGame && <span className="text-toss-gray-300"> · </span>}
+          {isFavGame && <span className="text-toss-blue">❤️ 내 팀 경기</span>}
+        </p>
       )}
 
       <div className="flex items-center justify-between">

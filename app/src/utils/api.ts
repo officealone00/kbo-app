@@ -103,6 +103,7 @@ export interface Batter {
   ab?: number;
   r?: number;
   h?: number;
+  hits?: number;
   doubles?: number;
   triples?: number;
   hr: number;
@@ -168,6 +169,36 @@ export interface Meta {
   total: number;
 }
 
+// ─── 가을야구 (2026-10-18) ──────────────────────
+export interface PostGame extends Game {
+  gameDate: string; // YYYYMMDD
+}
+
+export interface PostSeries {
+  id: 'wc' | 'semi' | 'po' | 'ks';
+  name: string;
+  winsNeeded: number | null;
+  teams: string[];
+  wins: Record<string, number>;
+  winner: string | null;
+  games: PostGame[];
+}
+
+export interface PostseasonData {
+  season: number;
+  updatedAt: string;
+  series: PostSeries[];
+}
+
+export interface H2HData {
+  season: number;
+  updatedAt: string;
+  h2h: Record<string, Record<string, { w: number; l: number; d: number }>>;
+}
+
+const EMPTY_POST: PostseasonData = { season: 0, updatedAt: '', series: [] };
+const EMPTY_H2H: H2HData = { season: 0, updatedAt: '', h2h: {} };
+
 // ─── API 함수들 (모두 자동 폴백 내장) ──────────────────────────────
 export const api = {
   standings: (force = false) =>
@@ -178,6 +209,14 @@ export const api = {
     fetchJsonWithRetry<PitchersData>('data/pitchers.json', FALLBACK_PITCHERS, force),
   games: (force = false) =>
     fetchJsonWithRetry<GamesData>('data/games.json', FALLBACK_GAMES, force),
+  postseason: (force = false) =>
+    fetchJsonWithRetry<PostseasonData>('data/postseason.json', EMPTY_POST, force),
+  h2h: (force = false) => fetchJsonWithRetry<H2HData>('data/h2h.json', EMPTY_H2H, force),
+  /** 가을야구 기간 개인 기록 (없으면 null) */
+  postBatters: (force = false) =>
+    fetchJsonWithRetry<(BattersData & { series?: string }) | null>('data/postseason_batters.json', null, force),
+  postPitchers: (force = false) =>
+    fetchJsonWithRetry<(PitchersData & { series?: string }) | null>('data/postseason_pitchers.json', null, force),
   meta: (force = false) =>
     fetchJsonWithRetry<Meta>('data/meta.json', FALLBACK_META, force),
 };

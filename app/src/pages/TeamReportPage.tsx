@@ -17,6 +17,7 @@ import { getFavoriteTeam } from '@/utils/storage';
 import { getTeam } from '@/data/teams';
 import { generateTeamReport, type TeamReport } from '@/utils/teamAnalytics';
 import RewardedAd, { preloadReportAd } from '@/components/RewardedAd';
+import { ConfirmSheet } from '@/components/BottomSheet';
 import { shareWithTossLink, logEvent, requestReviewOnce } from '@/utils/tossGrowth';
 import BannerAd from '@/components/BannerAd';
 
@@ -26,6 +27,7 @@ export default function TeamReportPage() {
   const [report, setReport] = useState<TeamReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [adShown, setAdShown] = useState(false);
+  const [ask, setAsk] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const unlockedRef = useRef(false); // 비동기 타이밍 이슈 방지
 
@@ -143,17 +145,28 @@ export default function TeamReportPage() {
                   전문가급 분석을 확인해보세요
                 </p>
                 <button
-                  onClick={() => setAdShown(true)}
+                  onClick={() => setAsk(true)}
                   className="w-full py-3 rounded-xl font-bold text-white text-sm shadow-lg"
                   style={{ backgroundColor: info.color }}
                 >
-                  📊 리포트 보기
+                  광고 보고 리포트 보기
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* 광고 전에 꼭 물어보기 (2026-10-18) */}
+      <ConfirmSheet
+        open={ask}
+        desc={'짧은 광고를 끝까지 보면\n스카우팅 리포트를 볼 수 있어요.'}
+        onClose={() => setAsk(false)}
+        onConfirm={() => {
+          setAsk(false);
+          setAdShown(true);
+        }}
+      />
 
       {/* 리워드 광고 실행 */}
       {adShown && (

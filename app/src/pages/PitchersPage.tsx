@@ -6,6 +6,8 @@ import BannerAd from '@/components/BannerAd';
 import TeamBadge from '@/components/TeamBadge';
 import RefreshButton from '@/components/RefreshButton';
 
+const SERIES_NAME: Record<string, string> = { '4': '와일드카드', '3': '준플레이오프', '5': '플레이오프', '7': '한국시리즈' };
+
 type Category = 'era' | 'w' | 'so' | 'sv' | 'hld';
 type Role = 'all' | '선발' | '불펜' | '마무리';
 
@@ -18,7 +20,10 @@ const CATEGORIES: { key: Category; label: string; unit: string }[] = [
 ];
 
 export default function PitchersPage() {
-  const [data, setData] = useState<PitchersData | null>(null);
+  const [season, setSeason] = useState<PitchersData | null>(null);
+  const [post, setPost] = useState<(PitchersData & { series?: string }) | null>(null);
+  const [mode, setMode] = useState<'season' | 'post'>('season');
+  const data = mode === 'post' && post ? post : season;
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,8 +36,9 @@ export default function PitchersPage() {
     try {
       if (force) setRefreshing(true);
       setError(null);
-      const d = await api.pitchers(force);
-      setData(d);
+      const [d, pd] = await Promise.all([api.pitchers(force), api.postPitchers(force).catch(() => null)]);
+      setSeason(d);
+      setPost(pd);
     } catch (e: any) {
       setError(e.message || '로딩 실패');
     } finally {
@@ -74,12 +80,34 @@ export default function PitchersPage() {
       <div className="px-5 pt-5 pb-3 bg-white flex items-start justify-between">
         <div>
           <h1 className="toss-title text-[24px]">⚾ 투수 순위</h1>
-          <p className="toss-caption mt-1">Top 30 · 카테고리/역할별 정렬</p>
+          <p className="toss-caption mt-1">{mode === 'post' ? '가을야구 기록' : '정규시즌 최종 기록'} · Top 30</p>
         </div>
         <div className="pt-1">
           <RefreshButton refreshing={refreshing} onClick={() => load(true)} />
         </div>
       </div>
+
+      {/* 정규시즌 / 가을야구 기록 (2026-10-18) */}
+      {post && (
+        <div className="px-5 pt-1 pb-3 bg-white flex gap-2">
+          {([
+            ['season', '정규시즌'],
+            ['post', `🍂 가을야구${post.series && SERIES_NAME[post.series] ? ` · ${SERIES_NAME[post.series]}` : ''}`],
+          ] as const).map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => setMode(k)}
+              className="px-3.5 py-1.5 rounded-full text-[13px] font-semibold"
+              style={{
+                backgroundColor: mode === k ? '#191F28' : '#F2F4F6',
+                color: mode === k ? 'white' : '#4E5968',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Category tabs */}
       <div className="px-5 py-3 bg-white">
