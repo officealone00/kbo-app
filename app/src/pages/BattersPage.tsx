@@ -65,7 +65,7 @@ export default function BattersPage() {
   return (
     <div className="min-h-screen bg-toss-gray-50">
       {/* Header */}
-      <div className="px-5 pt-14 pb-3 bg-white flex items-start justify-between">
+      <div className="px-5 pt-5 pb-3 bg-white flex items-start justify-between">
         <div>
           <h1 className="toss-title text-[24px]">🏏 타자 순위</h1>
           <p className="toss-caption mt-1">Top 30 · 카테고리별 정렬</p>

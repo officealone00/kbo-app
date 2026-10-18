@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react';
+import { preloadRewardedAd, showRewardedAd } from '@/utils/rewardedAdManager';
 
 // ─── 광고 ID 설정 ──────────────────────
 const IS_AD_PRODUCTION = true;
 const TEST_REWARDED_ID = 'ait-ad-test-rewarded-id';
 // ✅ 2026.04.19 발급 완료
 const PROD_REWARDED_ID = 'ait.v2.live.9d36016c855d4425';
-const AD_ID = IS_AD_PRODUCTION ? PROD_REWARDED_ID : TEST_REWARDED_ID;
+export const AD_ID = IS_AD_PRODUCTION ? PROD_REWARDED_ID : TEST_REWARDED_ID;
+
+/** 광고가 필요한 화면에 들어올 때 호출 — 광고를 미리 불러 둔다 */
+export function preloadReportAd() {
+  if (IS_DEV) return;
+  void preloadRewardedAd(AD_ID);
+}
 
 // 개발 모드 감지 (로컬 브라우저에서 빠른 테스트용)
 const IS_DEV = typeof window !== 'undefined' &&
@@ -19,9 +26,10 @@ interface Props {
 
 /**
  * 리워드 광고 (앱인토스 IntegratedAd v2)
- * - 보상형도 loadFullScreenAd / showFullScreenAd 사용 (전면형과 동일 API)
+ * - 화면 진입 시 preloadReportAd() 로 미리 로딩 → 버튼 누르면 바로 재생 (2026-10-18 정책 대응)
  * - 'userEarnedReward' 이벤트 발생 시 onReward() → 리포트 해금
- * - 'dismissed' 이벤트 시 onClose() (보상 못 받은 경우 부모에서 unlockedRef로 분기)
+ * - 광고가 닫히면 onClose()
+ * - 광고를 아예 쓸 수 없는 환경(로드 실패 등)에서는 사용자가 막히지 않도록 그대로 해금
  * - 로컬 개발 환경(localhost): 3초 카운트다운 후 자동 해금 (테스트 편의)
  */
 export default function RewardedAd({ onReward, onClose }: Props) {
@@ -29,9 +37,6 @@ export default function RewardedAd({ onReward, onClose }: Props) {
   const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
-    const cleanups: Array<() => void> = [];
-    let isShown = false; // 중복 show 방지 + 타임아웃 분기 판단
-
     // ─── 로컬 개발: 3초 카운트다운 후 해금 ───
     if (IS_DEV) {
       setStatus('playing');
@@ -46,110 +51,27 @@ export default function RewardedAd({ onReward, onClose }: Props) {
           return prev - 1;
         });
       }, 1000);
-      cleanups.push(() => clearInterval(interval));
-      return () => cleanups.forEach((fn) => fn());
+      return () => clearInterval(interval);
     }
 
-    // ─── 토스 앱: 실제 SDK 호출 ───
-    (async () => {
-      try {
-        const mod: any = await import('@apps-in-toss/web-framework');
-        const loadFullScreenAd = mod?.loadFullScreenAd;
-        const showFullScreenAd = mod?.showFullScreenAd;
-
-        if (typeof loadFullScreenAd !== 'function' || typeof showFullScreenAd !== 'function') {
-          console.warn('[RewardedAd] SDK 미지원: loadFullScreenAd/showFullScreenAd 없음');
+    // ─── 토스 앱: 미리 로딩된 광고 재생 ───
+    setStatus('ready');
+    void showRewardedAd(AD_ID, {
+      onShow: () => setStatus('playing'),
+      onReward,
+      onClose: ({ rewarded, failed }) => {
+        if (failed && !rewarded) {
+          // 광고를 불러올 수 없는 상황 → 사용자가 막히지 않도록 해금
           setStatus('error');
-          // SDK 자체를 못쓰는 환경 → UX 위해 짧은 지연 후 그대로 해금
           setTimeout(() => {
             onReward();
             onClose();
-          }, 1500);
+          }, 1200);
           return;
         }
-
-        const rm1 = loadFullScreenAd({
-          options: { adGroupId: AD_ID },
-          onEvent: (event: any) => {
-            console.log('[RewardedAd] load event:', event?.type, event);
-            if (event?.type !== 'loaded') return;
-            if (isShown) return; // loaded 중복 발화 방지
-            isShown = true;
-
-            setStatus('ready');
-            const rm2 = showFullScreenAd({
-              options: { adGroupId: AD_ID },
-              onEvent: (ev: any) => {
-                console.log('[RewardedAd] show event:', ev?.type, ev);
-
-                // 광고 표시 시작
-                if (ev?.type === 'show' || ev?.type === 'impression') {
-                  setStatus('playing');
-                }
-
-                // ✅ 보상 지급 이벤트 (앱인토스 표준)
-                if (ev?.type === 'userEarnedReward') {
-                  onReward();
-                }
-
-                // 광고 닫힘
-                if (ev?.type === 'dismissed' || ev?.type === 'closed') {
-                  onClose();
-                }
-
-                // 표시 실패
-                if (ev?.type === 'failedToShow') {
-                  console.warn('[RewardedAd] failedToShow:', ev);
-                  setStatus('error');
-                  onClose();
-                }
-              },
-              onError: (err: any) => {
-                console.warn('[RewardedAd] show error:', err);
-                setStatus('error');
-                onClose();
-              },
-            });
-            if (rm2) cleanups.push(rm2);
-          },
-          onError: (err: any) => {
-            console.warn('[RewardedAd] load error:', err);
-            setStatus('error');
-            // 광고 로드 실패 시 사용자가 막히지 않도록 폴백 해금
-            setTimeout(() => {
-              onReward();
-              onClose();
-            }, 1500);
-          },
-        });
-        if (rm1) cleanups.push(rm1);
-      } catch (e) {
-        console.warn('[RewardedAd] fatal:', e);
-        setStatus('error');
-        setTimeout(() => {
-          onReward();
-          onClose();
-        }, 1500);
-      }
-    })();
-
-    // 10초 안전 타임아웃: load 자체에 응답 없을 때만 폴백
-    const timeout = setTimeout(() => {
-      if (!isShown) {
-        console.warn('[RewardedAd] timeout — 광고 로드 응답 없음, 폴백 해금');
-        onReward();
         onClose();
-      }
-    }, 10000);
-    cleanups.push(() => clearTimeout(timeout));
-
-    return () => {
-      cleanups.forEach((fn) => {
-        try {
-          fn();
-        } catch {}
-      });
-    };
+      },
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

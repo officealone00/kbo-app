@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import StandingsPage from '@/pages/StandingsPage';
 import BattersPage from '@/pages/BattersPage';
@@ -6,15 +6,15 @@ import PitchersPage from '@/pages/PitchersPage';
 import GamesPage from '@/pages/GamesPage';
 import TeamReportPage from '@/pages/TeamReportPage';
 import BottomNav from '@/components/BottomNav';
+import { useTossBackEvent } from '@/hooks/useTossBackEvent';
 import FavoriteTeamModal from '@/components/FavoriteTeamModal';
 import {
-  hasOnboarded,
   markOnboarded,
   setFavoriteTeam,
 } from '@/utils/storage';
 
 export default function App() {
-  // MemoryRouter: 앱인토스 웹뷰의 뒤로가기 버튼과 브라우저 히스토리 충돌 방지
+  // MemoryRouter + useTossBackEvent: 토스 뒤로가기 → 이전 화면, 첫 화면에서만 미니앱 종료
   return (
     <MemoryRouter initialEntries={['/']}>
       <AppShell />
@@ -25,14 +25,26 @@ export default function App() {
 function AppShell() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // 첫 진입 시 온보딩 모달
-  useEffect(() => {
-    if (!hasOnboarded()) {
-      const t = setTimeout(() => setShowOnboarding(true), 600);
-      return () => clearTimeout(t);
+  // ─── 앱인토스 뒤로가기 (내비게이션 바 + 안드로이드 시스템 뒤로가기) ───
+  // - 온보딩 모달이 열려 있으면: 모달만 닫기
+  // - 이전 화면이 있으면: 이전 화면으로 이동
+  // - 첫 화면이면: 미니앱 종료(closeView)
+  useTossBackEvent(() => {
+    if (showOnboarding) {
+      setShowOnboarding(false);
+      return true;
     }
-  }, []);
+    if (location.key !== 'default') {
+      navigate(-1);
+      return true;
+    }
+    return false;
+  });
+
+  // (2026-10-18) 진입 직후 자동으로 뜨던 응원팀 선택 바텀시트는 제거했다.
+  // 정책: "진입 직후 바텀시트가 자동으로 뜨지 않아야 해요" → 순위 화면 안의 CTA로 직접 고르게 한다.
 
   const handleOnboardingSelect = (team: string | null) => {
     setFavoriteTeam(team);
@@ -44,7 +56,6 @@ function AppShell() {
 
   return (
     <>
-      <BackButtonHandler />
       <div className="page-content">
         <Routes>
           <Route path="/" element={<StandingsPage />} />
@@ -69,29 +80,3 @@ function AppShell() {
   );
 }
 
-// ─── 앱인토스 뒤로가기 통합 처리 ───
-// - 홈(/)이 아니면: 홈으로 이동
-// - 홈(/)이면: 토스 웹뷰가 자동으로 앱 종료 처리
-function BackButtonHandler() {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const handleBack = (e: PopStateEvent) => {
-      if (location.pathname !== '/') {
-        e.preventDefault();
-        navigate('/', { replace: true });
-        window.history.pushState(null, '', window.location.href);
-      }
-      // 루트에서는 별도 처리 X → 앱인토스 웹뷰가 앱 종료 처리
-    };
-
-    window.addEventListener('popstate', handleBack);
-    // 초기 스택 고정 (뒤로가기 첫 입력 방어)
-    window.history.pushState(null, '', window.location.href);
-
-    return () => window.removeEventListener('popstate', handleBack);
-  }, [location.pathname, navigate]);
-
-  return null;
-}

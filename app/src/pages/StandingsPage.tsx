@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Settings, RefreshCw, BarChart3 } from 'lucide-react';
+import { Heart, Settings, RefreshCw, BarChart3, Share2 } from 'lucide-react';
+import { shareWithTossLink, logEvent } from '@/utils/tossGrowth';
 import { api, type TeamStanding, type Meta } from '@/utils/api';
 import { getFavoriteTeam, setFavoriteTeam } from '@/utils/storage';
 import { getTeam } from '@/data/teams';
@@ -43,9 +44,9 @@ export default function StandingsPage() {
   return (
     <div className="min-h-screen bg-toss-gray-50">
       {/* Header */}
-      <div className="px-5 pt-14 pb-4 flex items-end justify-between bg-white">
+      <div className="px-5 pt-5 pb-4 flex items-end justify-between bg-white">
         <div>
-          <h1 className="toss-title text-[26px]">⚾ KBO 순위</h1>
+          <h1 className="toss-title text-[24px]">⚾ {meta?.season || new Date().getFullYear()} 정규시즌 순위</h1>
           <p className="toss-caption mt-1">
             {meta?.updatedAtKST ? `${meta.updatedAtKST.split(',')[0]} 업데이트` : `${meta?.season || new Date().getFullYear()} 시즌`}
           </p>
@@ -83,6 +84,22 @@ export default function StandingsPage() {
         </div>
       )}
 
+      {/* 응원팀 선택 CTA (진입 시 자동 팝업 대신 화면 안에서 고르게) */}
+      {!favorite && !loading && (
+        <div className="px-5 mb-3 mt-2">
+          <button
+            onClick={() => setShowModal(true)}
+            className="w-full bg-gradient-to-r from-toss-blue to-blue-500 text-white rounded-2xl p-4 flex items-center justify-between"
+          >
+            <div className="text-left">
+              <p className="text-sm opacity-90">⭐ 나의 응원팀은?</p>
+              <p className="font-bold mt-0.5">응원팀 고르고 내 팀 리포트 받기</p>
+            </div>
+            <Heart size={24} />
+          </button>
+        </div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="mx-5 mb-3 p-4 bg-toss-red/10 rounded-2xl">
@@ -91,7 +108,7 @@ export default function StandingsPage() {
           </p>
           <p className="text-xs text-toss-gray-600 mt-1">{error}</p>
           <button
-            onClick={load}
+            onClick={() => load()}
             className="mt-2 text-sm text-toss-blue font-semibold"
           >
             다시 시도
@@ -192,22 +209,6 @@ export default function StandingsPage() {
         <BannerAd />
       </div>
 
-      {/* 즐겨찾기 CTA (아직 설정 안했을 때) */}
-      {!favorite && !loading && (
-        <div className="px-5 mb-6">
-          <button
-            onClick={() => setShowModal(true)}
-            className="w-full bg-gradient-to-r from-toss-blue to-blue-500 text-white rounded-2xl p-4 flex items-center justify-between"
-          >
-            <div className="text-left">
-              <p className="text-sm opacity-90">⭐ 나의 응원팀은?</p>
-              <p className="font-bold mt-0.5">즐겨찾는 팀 설정하기</p>
-            </div>
-            <Heart size={24} />
-          </button>
-        </div>
-      )}
-
       {showModal && (
         <FavoriteTeamModal
           currentTeam={favorite}
@@ -273,6 +274,22 @@ function FavoriteTeamCard({
             <span className="text-sm font-bold">📊 상세 분석 리포트</span>
           </div>
           <span className="text-xs opacity-90">→</span>
+        </button>
+
+        {/* 📤 내 팀 순위 공유 (토스 공유 링크) */}
+        <button
+          onClick={() => {
+            logEvent('share_team_rank', { team });
+            void shareWithTossLink({
+              path: 'intoss://kbo-ranking',
+              message: `⚾ ${info.fullName} 지금 ${stats.rank}위! (${stats.wins}승 ${stats.draws}무 ${stats.losses}패)\n토스에서 KBO 순위 바로 보기 👇`,
+            });
+          }}
+          className="w-full mt-2 rounded-xl py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-semibold opacity-95"
+          style={{ border: '1px solid rgba(255,255,255,0.3)' }}
+        >
+          <Share2 size={14} />
+          친구에게 우리 팀 순위 공유하기
         </button>
       </div>
     </div>

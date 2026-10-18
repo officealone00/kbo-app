@@ -51,7 +51,7 @@ export default function GamesPage() {
   return (
     <div className="min-h-screen bg-toss-gray-50">
       {/* Header */}
-      <div className="px-5 pt-14 pb-3 bg-white flex items-start justify-between">
+      <div className="px-5 pt-5 pb-3 bg-white flex items-start justify-between">
         <div>
           <h1 className="toss-title text-[24px]">📅 경기 결과</h1>
           <p className="toss-caption mt-1">오늘 · 어제 경기</p>
