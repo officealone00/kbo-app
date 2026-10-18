@@ -587,6 +587,8 @@ async function scrapePostseason() {
       }
       await sleep(400);
     }
+    // 우천취소·연기된 경기는 빼야 1차전·2차전 번호가 맞아요
+    games = games.filter((g) => g.status !== "취소");
     games.sort((a, b) => (a.gameDate + (a.time || "")).localeCompare(b.gameDate + (b.time || "")));
     if (games.length === 0) continue;
     const teams = [...new Set(games.flatMap((g) => [g.away, g.home]))].slice(0, 2);
