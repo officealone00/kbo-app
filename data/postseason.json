@@ -1,6 +1,6 @@
 {
   "season": 2026,
-  "updatedAt": "2026-10-20T08:02:04.732Z",
+  "updatedAt": "2026-10-20T13:58:43.316Z",
   "series": [
     {
       "sr": "4",
@@ -39,9 +39,9 @@
       ],
       "wins": {
         "LG": 0,
-        "KIA": 2
+        "KIA": 3
       },
-      "winner": null,
+      "winner": "KIA",
       "games": [
         {
           "gameDate": "20261017",
@@ -65,28 +65,72 @@
           "gameDate": "20261020",
           "away": "KIA",
           "home": "LG",
-          "awayScore": null,
-          "homeScore": null,
-          "status": "예정",
+          "awayScore": 13,
+          "homeScore": 1,
+          "status": "종료",
           "time": "18:30"
-        },
+        }
+      ]
+    },
+    {
+      "sr": "5",
+      "id": "po",
+      "name": "플레이오프",
+      "winsNeeded": 3,
+      "teams": [
+        "KIA",
+        "삼성"
+      ],
+      "wins": {
+        "KIA": 0,
+        "삼성": 0
+      },
+      "winner": null,
+      "games": [
         {
-          "gameDate": "20261021",
+          "gameDate": "20261025",
           "away": "KIA",
-          "home": "LG",
+          "home": "삼성",
+          "awayScore": null,
+          "homeScore": null,
+          "status": "예정",
+          "time": "14:00"
+        },
+        {
+          "gameDate": "20261026",
+          "away": "KIA",
+          "home": "삼성",
           "awayScore": null,
           "homeScore": null,
           "status": "예정",
           "time": "18:30"
         },
         {
-          "gameDate": "20261023",
-          "away": "LG",
+          "gameDate": "20261028",
+          "away": "삼성",
           "home": "KIA",
           "awayScore": null,
           "homeScore": null,
           "status": "예정",
           "time": "18:30"
+        },
+        {
+          "gameDate": "20261029",
+          "away": "삼성",
+          "home": "KIA",
+          "awayScore": null,
+          "homeScore": null,
+          "status": "예정",
+          "time": "18:30"
+        },
+        {
+          "gameDate": "20261031",
+          "away": "KIA",
+          "home": "삼성",
+          "awayScore": null,
+          "homeScore": null,
+          "status": "예정",
+          "time": "14:00"
         }
       ]
     }
