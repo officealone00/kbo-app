@@ -1,6 +1,6 @@
 {
   "season": 2026,
-  "updatedAt": "2026-10-24T22:47:33.843Z",
+  "updatedAt": "2026-10-25T07:55:58.897Z",
   "series": [
     {
       "sr": "4",
@@ -106,9 +106,9 @@
           "time": "18:30"
         },
         {
-          "gameDate": "20261028",
-          "away": "삼성",
-          "home": "KIA",
+          "gameDate": "20261027",
+          "away": "KIA",
+          "home": "삼성",
           "awayScore": null,
           "homeScore": null,
           "status": "예정",
@@ -124,7 +124,16 @@
           "time": "18:30"
         },
         {
-          "gameDate": "20261031",
+          "gameDate": "20261030",
+          "away": "삼성",
+          "home": "KIA",
+          "awayScore": null,
+          "homeScore": null,
+          "status": "예정",
+          "time": "18:30"
+        },
+        {
+          "gameDate": "20261101",
           "away": "KIA",
           "home": "삼성",
           "awayScore": null,
