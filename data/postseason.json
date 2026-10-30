@@ -1,6 +1,6 @@
 {
   "season": 2026,
-  "updatedAt": "2026-10-30T09:17:50.200Z",
+  "updatedAt": "2026-10-30T18:20:25.605Z",
   "series": [
     {
       "sr": "4",
@@ -82,7 +82,7 @@
         "삼성"
       ],
       "wins": {
-        "KIA": 1,
+        "KIA": 2,
         "삼성": 2
       },
       "winner": null,
@@ -127,9 +127,9 @@
           "gameDate": "20261030",
           "away": "삼성",
           "home": "KIA",
-          "awayScore": null,
-          "homeScore": null,
-          "status": "예정",
+          "awayScore": 2,
+          "homeScore": 4,
+          "status": "종료",
           "time": "18:30"
         },
         {
