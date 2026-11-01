@@ -1,5 +1,9 @@
 {
   "today": {
+    "date": "20261102",
+    "games": []
+  },
+  "yesterday": {
     "date": "20261101",
     "games": [
       {
@@ -11,9 +15,5 @@
         "time": "14:00"
       }
     ]
-  },
-  "yesterday": {
-    "date": "20261031",
-    "games": []
   }
 }
