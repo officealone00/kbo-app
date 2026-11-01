@@ -5,9 +5,9 @@
       {
         "away": "KIA",
         "home": "삼성",
-        "awayScore": null,
-        "homeScore": null,
-        "status": "예정",
+        "awayScore": 1,
+        "homeScore": 6,
+        "status": "종료",
         "time": "14:00"
       }
     ]

@@ -1,6 +1,6 @@
 {
   "season": 2026,
-  "updatedAt": "2026-10-31T23:52:16.472Z",
+  "updatedAt": "2026-11-01T09:54:01.828Z",
   "series": [
     {
       "sr": "4",
@@ -83,9 +83,9 @@
       ],
       "wins": {
         "KIA": 2,
-        "삼성": 2
+        "삼성": 3
       },
-      "winner": null,
+      "winner": "삼성",
       "games": [
         {
           "gameDate": "20261025",
@@ -136,10 +136,90 @@
           "gameDate": "20261101",
           "away": "KIA",
           "home": "삼성",
+          "awayScore": 1,
+          "homeScore": 6,
+          "status": "종료",
+          "time": "14:00"
+        }
+      ]
+    },
+    {
+      "sr": "7",
+      "id": "ks",
+      "name": "한국시리즈",
+      "winsNeeded": 4,
+      "teams": [
+        "삼성",
+        "KT"
+      ],
+      "wins": {
+        "삼성": 0,
+        "KT": 0
+      },
+      "winner": null,
+      "games": [
+        {
+          "gameDate": "20261103",
+          "away": "삼성",
+          "home": "KT",
+          "awayScore": null,
+          "homeScore": null,
+          "status": "예정",
+          "time": "18:30"
+        },
+        {
+          "gameDate": "20261104",
+          "away": "삼성",
+          "home": "KT",
+          "awayScore": null,
+          "homeScore": null,
+          "status": "예정",
+          "time": "18:30"
+        },
+        {
+          "gameDate": "20261106",
+          "away": "KT",
+          "home": "삼성",
+          "awayScore": null,
+          "homeScore": null,
+          "status": "예정",
+          "time": "18:30"
+        },
+        {
+          "gameDate": "20261107",
+          "away": "KT",
+          "home": "삼성",
           "awayScore": null,
           "homeScore": null,
           "status": "예정",
           "time": "14:00"
+        },
+        {
+          "gameDate": "20261108",
+          "away": "KT",
+          "home": "삼성",
+          "awayScore": null,
+          "homeScore": null,
+          "status": "예정",
+          "time": "14:00"
+        },
+        {
+          "gameDate": "20261110",
+          "away": "삼성",
+          "home": "KT",
+          "awayScore": null,
+          "homeScore": null,
+          "status": "예정",
+          "time": "18:30"
+        },
+        {
+          "gameDate": "20261111",
+          "away": "삼성",
+          "home": "KT",
+          "awayScore": null,
+          "homeScore": null,
+          "status": "예정",
+          "time": "18:30"
         }
       ]
     }
