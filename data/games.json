@@ -1,6 +1,6 @@
 {
   "today": {
-    "date": "20261103",
+    "date": "20261104",
     "games": [
       {
         "away": "삼성",
@@ -13,7 +13,16 @@
     ]
   },
   "yesterday": {
-    "date": "20261102",
-    "games": []
+    "date": "20261103",
+    "games": [
+      {
+        "away": "삼성",
+        "home": "KT",
+        "awayScore": 7,
+        "homeScore": 8,
+        "status": "종료",
+        "time": "18:30"
+      }
+    ]
   }
 }
