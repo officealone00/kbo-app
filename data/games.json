@@ -1,6 +1,6 @@
 {
   "today": {
-    "date": "20261106",
+    "date": "20261107",
     "games": [
       {
         "away": "KT",
@@ -8,12 +8,21 @@
         "awayScore": null,
         "homeScore": null,
         "status": "예정",
-        "time": "18:30"
+        "time": "14:00"
       }
     ]
   },
   "yesterday": {
-    "date": "20261105",
-    "games": []
+    "date": "20261106",
+    "games": [
+      {
+        "away": "KT",
+        "home": "삼성",
+        "awayScore": 1,
+        "homeScore": 5,
+        "status": "종료",
+        "time": "18:30"
+      }
+    ]
   }
 }
