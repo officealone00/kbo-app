@@ -1,20 +1,6 @@
 [
   {
     "rank": 1,
-    "team": "KT",
-    "games": 144,
-    "wins": 90,
-    "losses": 49,
-    "draws": 5,
-    "winRate": 0.647,
-    "gamesBehind": 0,
-    "last10": "9승1무0패",
-    "streak": "10승",
-    "home": "45-2-24",
-    "away": "45-3-25"
-  },
-  {
-    "rank": 2,
     "team": "삼성",
     "games": 144,
     "wins": 83,
@@ -26,6 +12,20 @@
     "streak": "4패",
     "home": "43-1-29",
     "away": "40-2-29"
+  },
+  {
+    "rank": 2,
+    "team": "KT",
+    "games": 144,
+    "wins": 90,
+    "losses": 49,
+    "draws": 5,
+    "winRate": 0.647,
+    "gamesBehind": 0,
+    "last10": "9승1무0패",
+    "streak": "10승",
+    "home": "45-2-24",
+    "away": "45-3-25"
   },
   {
     "rank": 3,

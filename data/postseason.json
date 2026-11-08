@@ -1,6 +1,6 @@
 {
   "season": 2026,
-  "updatedAt": "2026-11-08T00:05:00.503Z",
+  "updatedAt": "2026-11-08T09:43:32.206Z",
   "series": [
     {
       "sr": "4",
@@ -153,10 +153,10 @@
         "KT"
       ],
       "wins": {
-        "삼성": 3,
+        "삼성": 4,
         "KT": 1
       },
-      "winner": null,
+      "winner": "삼성",
       "games": [
         {
           "gameDate": "20261103",
@@ -198,28 +198,10 @@
           "gameDate": "20261108",
           "away": "KT",
           "home": "삼성",
-          "awayScore": null,
-          "homeScore": null,
-          "status": "예정",
+          "awayScore": 1,
+          "homeScore": 12,
+          "status": "종료",
           "time": "14:00"
-        },
-        {
-          "gameDate": "20261110",
-          "away": "삼성",
-          "home": "KT",
-          "awayScore": null,
-          "homeScore": null,
-          "status": "예정",
-          "time": "18:30"
-        },
-        {
-          "gameDate": "20261111",
-          "away": "삼성",
-          "home": "KT",
-          "awayScore": null,
-          "homeScore": null,
-          "status": "예정",
-          "time": "18:30"
         }
       ]
     }
